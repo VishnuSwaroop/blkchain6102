@@ -3,8 +3,11 @@ from twisted.internet.protocol import Protocol, ClientFactory
         
 class NodeClient:
     def __init__(self, remoteIp, remotePort):
-        reactor.connectTCP(remoteIp, remotePort, NodeClientFactory(self))
-       
+        self.connection = reactor.connectTCP(remoteIp, remotePort, NodeClientFactory(self))
+        
+    def setProtocol(self, protocol):
+        self.protocol = protocol
+    
     def connectionMade(self, addr):
         print("Connected to: " + addr.host + ":" + str(addr.port))
         return "hello world"
@@ -19,6 +22,7 @@ class NodeClientProtocol(Protocol):
     def __init__(self, addr, nodeClient):
         self.addr = addr
         self.nodeClient = nodeClient
+        self.nodeClient.setProtocol(self)
     
     def dataReceived(self, data):
         retData = self.nodeClient.dataReceived(data)
@@ -40,5 +44,3 @@ class NodeClientFactory(ClientFactory):
     def buildProtocol(self, addr):
         return NodeClientProtocol(addr, self.nodeClient)
 
-nodeClient = NodeClient("localhost", 1234)
-reactor.run()

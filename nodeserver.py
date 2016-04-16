@@ -42,6 +42,4 @@ class NodeServerFactory(Factory):
 
     def buildProtocol(self, addr):
         return NodeServerProtocol(addr, self.nodeServer)
-
-nodeServer = NodeServer("localhost", 1234, 10)
-reactor.run()
+        
