@@ -12,30 +12,36 @@ class Node:
     def __init__(self):
         self.onConnect = None
         self.onReceive = None
+        self.onDisconnect = None
         self.protocol = None
         self.reactor = None
         
     def connectClient(self, remoteIp, remotePort):
         self.reactor.connectTCP(remoteIp, remotePort, NodeClientFactory(self))
-        print("Connecting to " + addrPortToStr(remoteIp, remotePort))
+        print("Node connecting to " + addrPortToStr(remoteIp, remotePort))
         
     def listenForConnect(self, localIp, localPort, backlog):
         endpoint = TCP4ServerEndpoint(self.reactor, localPort, backlog, localIp)
         endpoint.listen(NodeServerFactory(self))
-        print("Listening for connections on " + addrPortToStr(localIp, localPort))
+        print("Node listening for connections on " + addrPortToStr(localIp, localPort))
+    
+    def disconnect(self):
+        self.protocol.transport.loseConnection()
     
     def connectionMade(self, addr):
-        print("Connected to " + addrToStr(addr))
+        print("Node connected to " + addrToStr(addr))
         retData = None
         if self.onConnect:
-            retData = self.onConnect(addr)
+            retData = self.onConnect(addr, self)
         return retData
         
-    def connectionLost(self, reason):
-        print("Connection lost: " + reason.getErrorMessage())
+    def connectionLost(self, addr, reason):
+        print("Node connection lost: " + reason.getErrorMessage())
+        if self.onDisconnect:
+            self.onDisconnect(addr, reason)
        
     def dataReceived(self, addr, data):
-        print("Received from " + addrToStr(addr) + ": " + data)
+        print("Node received from " + addrToStr(addr) + ": " + data)
         retData = None
         if self.onReceive:
             retData = self.onReceive(addr, data)
@@ -68,7 +74,7 @@ class NodeProtocol(Protocol):
             self.transport.write(retData)
         
     def connectionLost(self, reason):
-        self.node.connectionLost(reason)
+        self.node.connectionLost(self.addr, reason)
 
 class NodeClientFactory(ClientFactory):
     def __init__(self, node):
