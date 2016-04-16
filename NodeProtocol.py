@@ -10,7 +10,8 @@ def addrToStr(addr):
        
 class Node:
     def __init__(self):
-        self.sendOnConnectData = None
+        self.onConnect = None
+        self.onReceive = None
         self.protocol = None
         self.reactor = None
         
@@ -25,15 +26,20 @@ class Node:
     
     def connectionMade(self, addr):
         print("Connected to " + addrToStr(addr))
-        data = self.sendOnConnectData
-        self.sendOnConnectData = None
-        return data
+        retData = None
+        if self.onConnect:
+            retData = self.onConnect(addr)
+        return retData
         
     def connectionLost(self, reason):
         print("Connection lost: " + reason.getErrorMessage())
        
     def dataReceived(self, addr, data):
         print("Received from " + addrToStr(addr) + ": " + data)
+        retData = None
+        if self.onReceive:
+            retData = self.onReceive(addr, data)
+        return retData
         
     def completeSend(self, data):
         if self.protocol:
@@ -41,11 +47,9 @@ class Node:
         return None
         
     def send(self, data):
+        # TODO: change the callback event here
         status = self.reactor.callWhenRunning(self.completeSend, data)
         return status
-        
-    def sendOnConnect(self, data):
-        self.sendOnConnectData = data
        
 class NodeProtocol(Protocol):
     def __init__(self, addr, node):

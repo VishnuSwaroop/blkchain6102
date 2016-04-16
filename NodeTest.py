@@ -7,11 +7,27 @@ class TxValidateNode:
     def __init__(self, cndsIp, cndsPort, localIp, localPort):
         self.reactor = reactor
         self.cnds = NodeClient(self.reactor, cndsIp, cndsPort)
+        self.cnds.onConnect = self.cndsOnConnect
+        self.cnds.onReceive = self.cndsDataReceived
+        
         self.server = NodeServer(self.reactor, localIp, localPort, 10)
-        self.cnds.sendOnConnect("join")
+        self.server.onConnect = self.nodeOnConnect
+        self.server.onReceive = self.nodeOnReceive
+        
+    def cndsOnConnect(self, addr):
+        return "join"
+        
+    def cndsDataReceived(self, addr, data):
+        if data == "approved":
+            print("Join succeeded")
+        else:
+            print("Join failed")
 
-    def dataReceived(self, addr, data):
-        print("Received from " + addrToStr(addr) + ": " + data)
+    def nodeOnConnect(self, addr):
+        print("Connected to node at " + addrToStr(addr))
+            
+    def nodeOnReceive(self, addr, data):
+        print("Received from node at " + addrToStr(addr) + ": " + data)
 
 def main(args):
     cndsIp = "localhost"
