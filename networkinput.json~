@@ -1,0 +1,62 @@
+{
+   "n8": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 8751,
+      "CNDSdomname": "leader1"
+   },
+   "n7": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 8089,
+      "CNDSdomname": "leader1"
+   },
+   "n4": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 2113,
+      "CNDSdomname": "leader1"
+   },
+   "n1": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 4410,
+      "CNDSdomname": "leader1"
+   },
+   "n6": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 4851,
+      "CNDSdomname": "leader1"
+   },
+   "n3": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 5177,
+      "CNDSdomname": "leader1"
+   },
+   "n2": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 3987,
+      "CNDSdomname": "leader1"
+   },
+   "n9": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 8502,
+      "CNDSdomname": "leader1"
+   },
+   "n0": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 9596,
+      "CNDSdomname": "leader1"
+   },
+   "n5": {
+      "CNDSip": "132.231.99.253",
+      "CNDSpubkey": "lunar123",
+      "nodepvtkey": 9108,
+      "CNDSdomname": "leader1"
+   }
+}

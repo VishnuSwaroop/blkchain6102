@@ -4,14 +4,14 @@ from Crypto.PublicKey import RSA
 from Crypto import Random
 
 listofkeys=[]
-for i in range(10):
-    random_generator = Random.new().read
-    key1 = RSA.generate(1024, random_generator)
-    listofkeys.append(key1)
+# for i in range(10):
+#     random_generator = Random.new().read
+#     key1 = RSA.generate(4096, random_generator)
+#     listofkeys.append(key1)
 
 #<_RSAobj @0x7f60cf1b57e8 n(1024),e,d,p,q,u,private>
 random_generator = Random.new().read
-cnds_key = RSA.generate(1024, random_generator)
+cnds_key = RSA.generate(4096, random_generator)
 CNDSpvtkey=(cnds_key.publickey().n,cnds_key.publickey().e,cnds_key.d)
 #print(type(nodepvtkey))
 CNDSpubkey=(cnds_key.publickey().n,cnds_key.publickey().e)
@@ -26,35 +26,39 @@ CNDSip='.'.join(CNDSip)
 
 
 CNDSpvtDict={"CNDSpvtkey":CNDSpvtkey}
+CNDSpubDict={"CNDSdomname":CNDSdomname,"CNDSip":CNDSip,"CNDSpubkey":CNDSpubkey}
 
-nodeips=[]
-for i in range(10):
-    nodeip=random.sample(range(0, 255), 4)
-    nodeip=[str(i) for i in nodeip]
-    nodeip='.'.join(nodeip)
-    nodeips.append(nodeip)
+# nodeips=[]
+# for i in range(10):
+#     nodeip=random.sample(range(0, 255), 4)
+#     nodeip=[str(i) for i in nodeip]
+#     nodeip='.'.join(nodeip)
+#     nodeips.append(nodeip)
 
 
 ntwkdata={}
 
-for i in range(10):
-    n="n"+str(i)
-    nodepvtkey=(listofkeys[i].publickey().n,listofkeys[i].publickey().e,listofkeys[i].d)
-    #print(type(nodepvtkey))
-    nodepubkey=(listofkeys[i].publickey().n,listofkeys[i].publickey().e)
-    #print(type(nodepubkey))
-    ntwkdata[n]={"CNDSdomname":CNDSdomname,"CNDSip":CNDSip,"CNDSpubkey":CNDSpubkey,"nodepvtkey":nodepvtkey,"nodeip":nodeips[i],"nodepubkey":nodepubkey}
+# for i in range(10):
+#     n="n"+str(i)
+#     nodepvtkey=(listofkeys[i].publickey().n,listofkeys[i].publickey().e,listofkeys[i].d)
+#     #print(type(nodepvtkey))
+#     nodepubkey=(listofkeys[i].publickey().n,listofkeys[i].publickey().e)
+#     #print(type(nodepubkey))
+#     ntwkdata[n]={"CNDSdomname":CNDSdomname,"CNDSip":CNDSip,"CNDSpubkey":CNDSpubkey,"nodepvtkey":nodepvtkey,"nodeip":nodeips[i],"nodepubkey":nodepubkey}
 
 
 
-with open('networkinput.json', 'w') as outfile:
-    json.dump(ntwkdata, outfile, indent=4,sort_keys=True)
+# with open('networkinput.json', 'w') as outfile:
+#     json.dump(ntwkdata, outfile, indent=4,sort_keys=True)
    
     
 
 
 with open('CNDSpvtkey.json', 'w') as outfile:
     json.dump(CNDSpvtDict, outfile, indent=4, sort_keys=True)
+    
+with open('CNDSpubkey.json', 'w') as outfile:
+    json.dump(CNDSpubDict, outfile, indent=4, sort_keys=True)
    
 
 #TO GET BACK THE JSON DATA USE THE BELOW CODE
