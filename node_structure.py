@@ -4,6 +4,7 @@ from Crypto.PublicKey import RSA
 from Crypto import Random
 import Crypto
 from Crypto.Hash import SHA512
+from TxValidateNode import *
 
 
 class node_methods:
@@ -17,8 +18,8 @@ class node_methods:
         self.nodepvtkey=nodepvtkey
         self.online=online
         
-        
-    def createnode(self): #Call create node in main, then give inputs for Node's IPaddress an CNDS info file path
+    
+    def createnode(self, nodeip, cndsip): #Call create node in main, then give inputs for Node's IPaddress an CNDS info file path
         #Node name
         i=random.randint(0,10) 
         i="n"+str(i)
@@ -31,20 +32,22 @@ class node_methods:
         self.nodepubkey=(key1.publickey().n,key1.publickey().e)
         
         #Node IP address
-        sys.argv= input('Enter the IP address: ')
-        self.nodeip=sys.argv
-        
+        #sys.argv= input('Enter the IP address: ')
+        #self.nodeip=sys.argv
+        self.nodeip = nodeip
         
         #CNDS public key
-        sys.argv= input('Enter the CNDS info file path: ')
-        with open(sys.argv,'r') as data_file:    
+        # sys.argv= input('Enter the CNDS info file path: ')
+        
+        with open('CNDSpubkey.json','r') as data_file:    
             networkdata = json.load(data_file)
         
         self.CNDSpubkey=tuple(networkdata["CNDSpubkey"])
         
         #CNDS IP and CNDS dom name
         self.CNDSdomname=networkdata["CNDSdomname"]
-        self.CNDSip= networkdata["CNDSip"]
+        #self.CNDSip= networkdata["CNDSip"]
+        self.CNDSip = cndsip
         
         #Convert to json and store on disk
         nodedict={"nodename":self.nodename,
@@ -58,10 +61,11 @@ class node_methods:
         with open('nodeinfo.json', 'w') as outfile:
             json.dump(nodedict, indent=4,sort_keys=True)
         
-        return node_methods
+        return self
     
     def join_req(self):
-        node_info={"nodename":self.nodename,"nodeip":self.nodeip,"nodepubkey":self.nodepubkey}
+        mssg_type=1
+        node_info={"type":mssg_type,"nodename":self.nodename,"nodeip":self.nodeip,"nodepubkey":self.nodepubkey}
         CNDSrouting=self.CNDSip
         
         
@@ -74,9 +78,9 @@ class node_methods:
         datahash.update(bytes(str(node_info_encrypt)))
         
         sendlist=[CNDSrouting,node_info_encrypt,datahash] #Sending the CNDS' IP address, encrypted node information, hash of the encrypted node information
-        
+        sendlist_json=json.dumps(sendlist)
         #Might need to add another hash function here for whole message
-        return sendlist
+        return sendlist_json
     
     
     def connection_status(self, CNDSresponse):
