@@ -16,7 +16,7 @@ def main(args):
     
     print("Starting NodeTest")
     node = TxValidateNode(cndsIp, cndsPort, localIp, localPort)
-    node.createnode(localIp, cndsIp)
+    node.createnode(localIp, "CNDSpubkey.json")
     node.run()
     
 if __name__ == "__main__":

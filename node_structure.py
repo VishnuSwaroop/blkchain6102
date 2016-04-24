@@ -4,8 +4,7 @@ from Crypto.PublicKey import RSA
 from Crypto import Random
 import Crypto
 from Crypto.Hash import SHA512
-from TxValidateNode import *
-
+from NodeMessage import *
 
 class node_methods:
     def __init__(self,nodename='',CNDSdomname='',CNDSip='',CNDSpubkey=(),nodeip='',nodepubkey=(),nodepvtkey=(),online=False):
@@ -17,37 +16,34 @@ class node_methods:
         self.nodepubkey=nodepubkey 
         self.nodepvtkey=nodepvtkey
         self.online=online
-        
     
-    def createnode(self, nodeip, cndsip): #Call create node in main, then give inputs for Node's IPaddress an CNDS info file path
+    def createnode(self, nodeip, cnds_info_path): #Call create node in main, then give inputs for Node's IPaddress an CNDS info file path
         #Node name
         i=random.randint(0,10) 
         i="n"+str(i)
         self.nodename=i
         
         #Node public and private keys
+        print("Creating public and private keys")
         random_generator = Random.new().read
         key1 = RSA.generate(4096, random_generator)
-        self.nodepvtkey=(key1.publickey().n,key1.publickey().e,key1.d)
-        self.nodepubkey=(key1.publickey().n,key1.publickey().e)
+        self.nodepvtkey=(long(key1.publickey().n),long(key1.publickey().e),long(key1.d))
+        self.nodepubkey=(long(key1.publickey().n),long(key1.publickey().e))
         
         #Node IP address
-        #sys.argv= input('Enter the IP address: ')
-        #self.nodeip=sys.argv
         self.nodeip = nodeip
         
         #CNDS public key
-        # sys.argv= input('Enter the CNDS info file path: ')
-        
-        with open('CNDSpubkey.json','r') as data_file:    
+        print("Loading CNDS information")
+        with open(cnds_info_path,'r') as data_file:    
             networkdata = json.load(data_file)
         
-        self.CNDSpubkey=tuple(networkdata["CNDSpubkey"])
+        cndspubkey = networkdata["CNDSpubkey"]
+        self.CNDSpubkey=(long(cndspubkey[0]), long(cndspubkey[1]))
         
         #CNDS IP and CNDS dom name
         self.CNDSdomname=networkdata["CNDSdomname"]
-        #self.CNDSip= networkdata["CNDSip"]
-        self.CNDSip = cndsip
+        self.CNDSip=networkdata["CNDSip"]
         
         #Convert to json and store on disk
         nodedict={"nodename":self.nodename,
@@ -58,35 +54,32 @@ class node_methods:
                   "nodepubkey": self.nodepubkey,
                   "nodepvtkey": self.nodepvtkey}
         
+        print("Saving node info")
         with open('nodeinfo.json', 'w') as outfile:
-            json.dump(nodedict, indent=4,sort_keys=True)
-        
-        return self
+            json.dump(nodedict, outfile, indent=4, sort_keys=True)
+            
+        # Create ciphers
+        print("Creating ciphers")
+        self.CNDScipher = PKCS1_OAEP.new(RSA.construct(self.CNDSpubkey))
+        self.nodecipher = PKCS1_OAEP.new(RSA.construct(self.nodepvtkey))
     
     def join_req(self):
-        mssg_type=1
-        node_info={"type":mssg_type,"nodename":self.nodename,"nodeip":self.nodeip,"nodepubkey":self.nodepubkey}
-        CNDSrouting=self.CNDSip
-        
-        
-        node_info_json=json.dumps(node_info, indent=4,sort_keys=True)
-        tempkey=RSA.construct(self.CNDSpubkey)
-        node_info_encrypt=tempkey.encrypt(node_info_json,32)
-        
-        
-        datahash=SHA512.new()
-        datahash.update(bytes(str(node_info_encrypt)))
-        
-        sendlist=[CNDSrouting,node_info_encrypt,datahash] #Sending the CNDS' IP address, encrypted node information, hash of the encrypted node information
-        sendlist_json=json.dumps(sendlist)
-        #Might need to add another hash function here for whole message
-        return sendlist_json
+        print("Sending join request")
+        node_info={"nodename":self.nodename,"nodeip":self.nodeip,"nodepubkey":self.nodepubkey}
+        return NodeMessage(NodeMessages.JoinRequest, node_info, self.CNDScipher)
     
-    
-    def connection_status(self, CNDSresponse):
-        if CNDSresponse==True:
+    def handle_join_resp(self, CNDSresponse):
+        print("Receiving join response")
+        if CNDSresponse["approved"]==True:
+            print("Node joined successfully")
             self.online==True
-        
+    
+    def handle_ping_req(self, CNDSreq):
+        print("Sending ping response")
+        tag = 0
+        if CNDSreq["tag"]:
+            tag = CNDSreq["tag"]
+        return NodeMessage(NodeMessages.PingResponse, {"tag": tag}, self.nodecipher)
         
     def node_info_req(self):
         info_needed=True

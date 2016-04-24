@@ -18,30 +18,30 @@ class Node:
         
     def connectClient(self, remoteIp, remotePort):
         self.reactor.connectTCP(remoteIp, remotePort, NodeClientFactory(self))
-        print("Node connecting to " + addrPortToStr(remoteIp, remotePort))
+        #print("Node connecting to " + addrPortToStr(remoteIp, remotePort))
         
     def listenForConnect(self, localIp, localPort, backlog):
         endpoint = TCP4ServerEndpoint(self.reactor, localPort, backlog, localIp)
         endpoint.listen(NodeServerFactory(self))
-        print("Node listening for connections on " + addrPortToStr(localIp, localPort))
+        #print("Node listening for connections on " + addrPortToStr(localIp, localPort))
     
     def disconnect(self):
         self.protocol.transport.loseConnection()
     
     def connectionMade(self, addr):
-        print("Node connected to " + addrToStr(addr))
+        #print("Node connected to " + addrToStr(addr))
         retData = None
         if self.onConnect:
             retData = self.onConnect(addr, self)
         return retData
         
     def connectionLost(self, addr, reason):
-        print("Node connection lost: " + reason.getErrorMessage())
+        #print("Node connection lost: " + reason.getErrorMessage())
         if self.onDisconnect:
             self.onDisconnect(addr, reason)
        
     def dataReceived(self, addr, data):
-        print("Node received from " + addrToStr(addr) + ": " + data)
+        #print("Node received from " + addrToStr(addr) + ": " + data)
         retData = None
         if self.onReceive:
             retData = self.onReceive(addr, data)
