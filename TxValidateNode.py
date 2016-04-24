@@ -30,18 +30,27 @@ class TxValidateNode(node_methods):
         msg_type, msg = NodeMessage.deserialize(data, self.nodecipher)
         print("Received message from CNDS at " + addrToStr(addr) + " (type " + str(msg_type) + ")")
         
+        resp_msg = None
+        
+        # TODO: check for correct CNDS ip
+        
+        # Call appropriate handler
         if msg_type == NodeMessages.JoinResponse:
-            self.handle_join_resp(msg)
+            resp_msg = self.handle_join_resp(msg)
         elif msg_type == NodeMessages.PingRequest:
-            return self.handle_ping_req(msg).serialize()
+            resp_msg = self.handle_ping_req(msg)
+        elif msg_type == NodeMessage.NodeInfoResponse:
+            resp_msg = self.handle_node_info_resp(msg)
             
-        return None
+        if resp_msg:
+            return resp_msg.serialize()
 
     def nodeOnConnect(self, addr, node):
         print("Connected to node at " + addrToStr(addr))
             
     def nodeOnReceive(self, addr, data):
-        print("Received message from node at " + addrToStr(addr))
+        msg_type, msg = NodeMessage.deserialize(data, self.nodecipher)
+        print("Received message from node at " + addrToStr(addr) + " (type " + str(msg_type) + ")")
 
     
     

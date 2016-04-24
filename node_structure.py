@@ -73,6 +73,7 @@ class node_methods:
         if CNDSresponse["approved"]==True:
             print("Node joined successfully")
             self.online==True
+            return self.node_info_req()
     
     def handle_ping_req(self, CNDSreq):
         print("Sending ping response")
@@ -82,8 +83,14 @@ class node_methods:
         return NodeMessage(NodeMessages.PingResponse, {"tag": tag}, self.nodecipher)
         
     def node_info_req(self):
-        info_needed=True
-        sendlist=[self.CNDSip,info_needed] #is digital signature required here  ?? Do all messages from everyone need a digital signature ?
+        print("Sending node info request to CNDS")
+        return NodeMessage(NodeMessages.NodeInfoRequest, { }, self.nodecipher)
+    
+    def handle_node_info_resp(self, network_info):
+        print("Received node info response from CNDS")
+        # Storing the received data locally, so that we can use it if the system restarts
+        with open('NetworkInfo.json', 'w') as outfile:
+            json.dump(network_info, outfile, indent=4, sort_keys=True) 
     
     def save_node_info(self,network_info): #network_info should be [encrypted message, hash of encrypted message, digital signature]
         tempkey=RSA.construct(self.CNDSpubkey)

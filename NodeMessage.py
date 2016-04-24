@@ -1,17 +1,20 @@
 import json
+from enum import Enum
 from struct import *
 from Crypto import Random
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA512
 
-class NodeMessages:
+class NodeMessages(Enum):
     Null = 0
     JoinRequest = 1
     JoinResponse = 2
     PingRequest = 3
     PingResponse = 4
-
+    NodeInfoRequest = 5
+    NodeInfoResponse = 6
+    
 # Messages are serialized in the following format:
 # Field Name            Size (bytes)
 # Message Type          2
@@ -37,6 +40,7 @@ class NodeMessage:
     def serialize(self):
         # Serialize message dictionary to JSON payload
         payload = json.dumps(self.payload_dict, indent=4, sort_keys=True)
+        #print(payload)
         
         # Encrypt JSON payload
         if self.cipher:
@@ -46,13 +50,13 @@ class NodeMessage:
         datahash = SHA512.new(bytes(str(payload)))
         
         # Create message as list of header, payload, and hash
-        return pack('!1H' + str(len(payload)) + 's64s', self.msg_type, payload, datahash.digest())
+        return pack('!1H' + str(len(payload)) + 's64s', self.msg_type.value, payload, datahash.digest())
     
     @staticmethod
     def deserialize(data, cipher):
         # Parse message
         # TODO: should check data before indexing into tuples
-        msg_type = unpack('!H', data[0:2])[0]
+        msg_type = NodeMessages(unpack('!H', data[0:2])[0])
         payload = data[2:len(data)-64]
         datahash = data[len(data)-64:] # subtract hash size
         

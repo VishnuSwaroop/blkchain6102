@@ -76,6 +76,9 @@ class CndsTest:
         if addr in self.nodes:
             self.nodes[addr].pingResp = ping_resp["tag"]
     
+    def handleNodeInfoRequest(self, addr, info_req):
+        print("CNDS: Node at " + addrToStr(addr) + " requesting info")
+    
     def nodeConnect(self, addr, node):
         print("CNDS: Node connected from " + addrToStr(addr))
         self.addNode(addr, node)
@@ -85,12 +88,19 @@ class CndsTest:
         msg_type, msg = NodeMessage.deserialize(data, self.cipher)
         print("Received message from node at " + addrToStr(addr) + " (type " + str(msg_type) + ")")
         
+        resp_msg = None
+        
         if msg_type == NodeMessages.JoinRequest:
-            return self.joinNode(addr, msg).serialize()
+            resp_msg = self.joinNode(addr, msg)
         elif msg_type == NodeMessages.PingResponse:
-            self.handlePingResp(addr, msg)
+            resp_msg = self.handlePingResp(addr, msg)
+        elif msg_type == NodeMessages.NodeInfoRequest:
+            resp_msg = self.handleNodeInfoRequest(addr, msg)
         else:
             print("CNDS: Invalid message received from " + addrToStr(addr) + ": " + data)
+        
+        if resp_msg:
+            return resp_msg.serialize()
             
     def nodeDisconnect(self, addr, reason):
         print("CNDS: Lost connection with " + addrToStr(addr) + ": " + reason.getErrorMessage())
