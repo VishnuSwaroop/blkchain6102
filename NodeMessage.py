@@ -29,13 +29,23 @@ class NodeMessage:
     
     @staticmethod
     def encrypt_payload(payload_str, cipher):
-        return payload_str      # TODO: fix this. complains about payload_str size
-        #return cipher.encrypt(payload_str)
+        return payload_str
+        #stride = 470        # TODO: how is this size related to key size? any larger and cipher.encrypt will complain
+        #blocks = []
+        #for i in xrange(0, len(payload_str)-1, stride):
+        #    end_stride = min(i+stride-1, len(payload_str)-1)
+        #    blocks.append(cipher.encrypt(payload_str[i:end_stride]))
+        #return "".join(blocks)
         
     @staticmethod
     def decrypt_payload(encrypted_payload_str, cipher):
-        return encrypted_payload_str      # TODO: fix this. complains about payload_str size
-        #return cipher.decrypt(encrypted_payload_str)
+        return encrypted_payload_str
+        #stride = 470        # TODO: how is this size related to key size? any larger and cipher.encrypt will complain
+        #blocks = []
+        #for i in xrange(0, len(encrypted_payload_str)-1, stride):
+        #    end_stride = min(i+stride-1, len(encrypted_payload_str)-1)
+        #    blocks.append(cipher.decrypt(encrypted_payload_str[i:end_stride]))
+        #return "".join(blocks)
         
     def serialize(self):
         # Serialize message dictionary to JSON payload

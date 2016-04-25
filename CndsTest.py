@@ -19,7 +19,16 @@ class NodeEntry:
         self.cipher = PKCS1_OAEP.new(RSA.construct(key))
 
 class CndsTest:
-    def __init__(self, localIp, localPort, cnds_info_path):
+    def __init__(self, cnds_config_path):
+        
+        pvtkey = None
+        with open(cnds_config_path,'r') as data_file:    
+            cnds_config = json.load(data_file)
+            key = cnds_config["CNDSpvtkey"]
+            pvtkey = (long(key[0]), long(key[1]), long(key[2]))
+            localIp = cnds_config["CNDSip"]
+            localPort = cnds_config["CNDSport"]
+        
         self.reactor = reactor
         self.server = NodeServer(self.reactor, localIp, localPort, 10)
         self.server.onConnect = self.nodeConnect
@@ -27,13 +36,38 @@ class CndsTest:
         self.server.onDisconnect = self.nodeDisconnect
         self.nodes = { }
         
-        pvtkey = None
-        with open(cnds_info_path,'r') as data_file:    
-            cnds_info = json.load(data_file)
-            key = cnds_info["CNDSpvtkey"]
-            pvtkey = (long(key[0]), long(key[1]), long(key[2]))
-       
+        # Create cipher
         self.cipher = PKCS1_OAEP.new(RSA.construct(pvtkey))
+        
+    @staticmethod
+    def generateCndsConfig(cnds_config_path, cnds_info_path, cndsip, cndsport):
+        CNDSdomname = "leader1"
+        print("Creating public and private keys")
+        random_generator = Random.new().read
+        key1 = RSA.generate(4096, random_generator)
+        pvtkey=(long(key1.publickey().n),long(key1.publickey().e),long(key1.d))
+        pubkey=(long(key1.publickey().n),long(key1.publickey().e))
+        
+        # Create cnds_config.json
+        cnds_config = {"CNDSip": cndsip,
+            "CNDSdomname": CNDSdomname,
+            "CNDSport": cndsport,
+            "CNDSpubkey": pubkey,
+            "CNDSpvtkey": pvtkey}
+        
+        print("Saving CNDS config")
+        with open(cnds_config_path, 'w') as outfile:
+            json.dump(cnds_config, outfile, indent=4, sort_keys=True)
+            
+        # Create cnds_info.json
+        cnds_info = {"CNDSip": cndsip,
+            "CNDSdomname": CNDSdomname,
+            "CNDSport": cndsport,
+            "CNDSpubkey": pubkey}
+        
+        print("Saving CNDS info")
+        with open(cnds_info_path, 'w') as outfile:
+            json.dump(cnds_info, outfile, indent=4, sort_keys=True)
         
     def run(self):
         print("Running CNDS server")
@@ -107,15 +141,23 @@ class CndsTest:
         self.removeNode(addr)
 
 def main(args):
-    cndsIp = "localhost"
-    cndsPort = 1234
-    
-    #numArgs = len(args)
-    #if numArgs == 2:
-    #    cndsPort = int(args[1])
+    generate = False
+    cnds_config_path = "cnds_config.json"
+    cnds_info_path = "cnds_info.json"
+   
+    for arg in args[1:]:
+        if arg == "gen":
+            generate = True
+        else:
+            cnds_config_path = arg
+        
+    # Generate node ID
+    if generate:
+        print("Generating CNDS configuration")
+        CndsTest.generateCndsConfig(cnds_config_path, cnds_info_path, "localhost", 1234)
 
-    print("Starting CNDS dummy server")
-    cndsServer = CndsTest(cndsIp, cndsPort, "CNDSpvtkey.json")
+    print("Starting CNDS server")
+    cndsServer = CndsTest(cnds_config_path)
     cndsServer.run()
     
 if __name__ == "__main__":

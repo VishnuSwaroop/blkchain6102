@@ -1,8 +1,8 @@
 import json
 import random
+from uuid import uuid4
 from Crypto.PublicKey import RSA
 from Crypto import Random
-import Crypto
 from Crypto.Hash import SHA512
 from NodeMessage import *
 
@@ -17,33 +17,60 @@ class node_methods:
         self.nodepvtkey=nodepvtkey
         self.online=online
     
-    def createnode(self, nodeip, cnds_info_path): #Call create node in main, then give inputs for Node's IPaddress an CNDS info file path
-        #Node name
-        i=random.randint(0,10) 
-        i="n"+str(i)
-        self.nodename=i
-        
+    @staticmethod
+    def generate_node_config(node_config_path, nodeip, nodeport):
+        nodename = str(uuid4())
+    
+        # TODO: this routine should validate nodeip/nodeport
         #Node public and private keys
         print("Creating public and private keys")
         random_generator = Random.new().read
         key1 = RSA.generate(4096, random_generator)
-        self.nodepvtkey=(long(key1.publickey().n),long(key1.publickey().e),long(key1.d))
-        self.nodepubkey=(long(key1.publickey().n),long(key1.publickey().e))
+        nodepvtkey=(long(key1.publickey().n),long(key1.publickey().e),long(key1.d))
+        nodepubkey=(long(key1.publickey().n),long(key1.publickey().e))
         
-        #Node IP address
-        self.nodeip = nodeip
+        #Convert to json and store on disk
+        node_config = {"nodename":nodename,
+            "nodeip": nodeip,
+            "nodeport": nodeport,
+            "nodepubkey": nodepubkey,
+            "nodepvtkey": nodepvtkey}
         
-        #CNDS public key
+        print("Saving node info")
+        with open(node_config_path, 'w') as outfile:
+            json.dump(node_config, outfile, indent=4, sort_keys=True)
+            
+    def load_config(self, node_config_path, cnds_info_path): #Call create node in main, then give inputs for Node's IPaddress an CNDS info file path
+        print("Loading node configuration")
+        with open(node_config_path,'r') as data_file:
+            node_config = json.load(data_file)
+           
+        # Load from node config
+        # TODO: data validation on file inputs
+        self.nodename = node_config["nodename"]
+        self.nodeip = node_config["nodeip"]
+        self.nodeport = node_config["nodeport"]
+        self.nodepvtkey=(
+            long(node_config["nodepvtkey"][0]),
+            long(node_config["nodepvtkey"][1]),
+            long(node_config["nodepvtkey"][2])
+            )
+        self.nodepubkey=(
+            long(node_config["nodepubkey"][0]),
+            long(node_config["nodepubkey"][1])
+            )
+        
+        # Load from CNDS info
         print("Loading CNDS information")
         with open(cnds_info_path,'r') as data_file:    
             networkdata = json.load(data_file)
         
+        # TODO: validation on file input
         cndspubkey = networkdata["CNDSpubkey"]
         self.CNDSpubkey=(long(cndspubkey[0]), long(cndspubkey[1]))
-        
-        #CNDS IP and CNDS dom name
         self.CNDSdomname=networkdata["CNDSdomname"]
         self.CNDSip=networkdata["CNDSip"]
+        self.CNDSport=networkdata["CNDSport"]
         
         #Convert to json and store on disk
         nodedict={"nodename":self.nodename,

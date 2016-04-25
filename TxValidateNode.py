@@ -6,15 +6,16 @@ from NodeMessage import *
 from node_structure import node_methods
 
 class TxValidateNode(node_methods):
-    def __init__(self, cndsIp, cndsPort, localIp, localPort):
+    def __init__(self, node_config_path, cnds_info_path):
         node_methods.__init__(self)
+        self.load_config(node_config_path, cnds_info_path)
         
         self.reactor = reactor
-        self.cnds = NodeClient(self.reactor, cndsIp, cndsPort)
+        self.cnds = NodeClient(self.reactor, self.CNDSip, self.CNDSport)
         self.cnds.onConnect = self.cndsOnConnect
         self.cnds.onReceive = self.cndsDataReceived
         
-        self.server = NodeServer(self.reactor, localIp, localPort, 10)
+        self.server = NodeServer(self.reactor, self.nodeip, self.nodeport, 10)
         self.server.onConnect = self.nodeOnConnect
         self.server.onReceive = self.nodeOnReceive
         

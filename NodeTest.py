@@ -2,21 +2,24 @@ import sys
 from TxValidateNode import *
 
 def main(args):
-    cndsIp = "localhost"
-    cndsPort = 1234
-    localIp = "localhost"
-    localPort = 1235
+
+    generate = False
+    node_config_path = "node_config.json"
+    cnds_info_path = "cnds_info.json"
+   
+    for arg in args[1:]:
+        if arg == "gen":
+            generate = True
+        else:
+            node_config_path = arg
+        
+    # Generate node ID
+    if generate:
+        print("Generating Node configuration")
+        TxValidateNode.generate_node_config(node_config_path, "localhost", 1234)
     
-    numArgs = len(args)
-    if numArgs == 5:
-        cndsIp = args[1]
-        cndsPort = int(args[2])
-        localIp = args[3]
-        localPort = int(args[4])
-    
-    print("Starting NodeTest")
-    node = TxValidateNode(cndsIp, cndsPort, localIp, localPort)
-    node.createnode(localIp, "CNDSpubkey.json")
+    print("Starting Node")
+    node = TxValidateNode(node_config_path, cnds_info_path)
     node.run()
     
 if __name__ == "__main__":
