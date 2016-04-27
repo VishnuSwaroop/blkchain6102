@@ -9,3 +9,14 @@ class NodeServer(Node):
         self.reactor = reactor
         self.listenForConnect(localIp, localPort, backlog)
         
+    def listenForConnect(self, localIp, localPort, backlog):
+        endpoint = TCP4ServerEndpoint(self.reactor, localPort, backlog, localIp)
+        endpoint.listen(NodeServerFactory(self))
+        print("Node listening for connections on " + addrPortToStr(localIp, localPort))
+        
+class NodeServerFactory(Factory):
+    def __init__(self, node):
+        self.node = node
+        
+    def buildProtocol(self, addr):
+        return NodeProtocol(addr, self.node)

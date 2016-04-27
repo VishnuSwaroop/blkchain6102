@@ -1,5 +1,5 @@
 from twisted.internet import reactor
-from twisted.internet.protocol import Protocol, Factory, ClientFactory
+from twisted.internet.protocol import Protocol
 from twisted.internet.endpoints import TCP4ServerEndpoint
        
 def addrPortToStr(ip, port):
@@ -15,15 +15,6 @@ class Node:
         self.onDisconnect = None
         self.protocol = None
         self.reactor = None
-        
-    def connectClient(self, remoteIp, remotePort):
-        self.reactor.connectTCP(remoteIp, remotePort, NodeClientFactory(self))
-        #print("Node connecting to " + addrPortToStr(remoteIp, remotePort))
-        
-    def listenForConnect(self, localIp, localPort, backlog):
-        endpoint = TCP4ServerEndpoint(self.reactor, localPort, backlog, localIp)
-        endpoint.listen(NodeServerFactory(self))
-        #print("Node listening for connections on " + addrPortToStr(localIp, localPort))
     
     def disconnect(self):
         self.protocol.transport.loseConnection()
@@ -75,18 +66,4 @@ class NodeProtocol(Protocol):
         
     def connectionLost(self, reason):
         self.node.connectionLost(self.addr, reason)
-
-class NodeClientFactory(ClientFactory):
-    def __init__(self, node):
-        self.node = node
-        
-    def buildProtocol(self, addr):
-        return NodeProtocol(addr, self.node)
-        
-class NodeServerFactory(Factory):
-    def __init__(self, node):
-        self.node = node
-        
-    def buildProtocol(self, addr):
-        return NodeProtocol(addr, self.node)
 

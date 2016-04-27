@@ -14,6 +14,12 @@ class NodeMessages(Enum):
     PingResponse = 4
     NodeInfoRequest = 5
     NodeInfoResponse = 6
+    AddTxRequest = 7
+    AddTxResponse = 8
+    FwdTxRequest = 9
+    AddBlockRequest = 10
+    
+    
     
 # Messages are serialized in the following format:
 # Field Name            Size (bytes)
@@ -30,6 +36,7 @@ class NodeMessage:
     @staticmethod
     def encrypt_payload(payload_str, cipher):
         return payload_str
+        #return cipher.encrypt(payload_str)
         #stride = 470        # TODO: how is this size related to key size? any larger and cipher.encrypt will complain
         #blocks = []
         #for i in xrange(0, len(payload_str)-1, stride):
@@ -40,6 +47,7 @@ class NodeMessage:
     @staticmethod
     def decrypt_payload(encrypted_payload_str, cipher):
         return encrypted_payload_str
+        #return cipher.decrypt(encrypted_payload_str)
         #stride = 470        # TODO: how is this size related to key size? any larger and cipher.encrypt will complain
         #blocks = []
         #for i in xrange(0, len(encrypted_payload_str)-1, stride):
@@ -50,7 +58,6 @@ class NodeMessage:
     def serialize(self):
         # Serialize message dictionary to JSON payload
         payload = json.dumps(self.payload_dict, indent=4, sort_keys=True)
-        #print(payload)
         
         # Encrypt JSON payload
         if self.cipher:

@@ -16,6 +16,7 @@ class node_methods:
         self.nodepubkey=nodepubkey 
         self.nodepvtkey=nodepvtkey
         self.online=online
+        self.network_info=None
     
     @staticmethod
     def generate_node_config(node_config_path, nodeip, nodeport):
@@ -115,6 +116,9 @@ class node_methods:
     
     def handle_node_info_resp(self, network_info):
         print("Received node info response from CNDS")
+        self.network_info = network_info
+        print(self.network_info)
+        
         # Storing the received data locally, so that we can use it if the system restarts
         with open('NetworkInfo.json', 'w') as outfile:
             json.dump(network_info, outfile, indent=4, sort_keys=True) 

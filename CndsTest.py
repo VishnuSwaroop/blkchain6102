@@ -10,13 +10,15 @@ class NodeEntry:
         self.pingResp = 0
         self.name = None
         self.ip = None
+        self.pubkey = None
         self.cipher = None
         
     def populate(self, name, ip, pubkey):
         self.name = name
         self.ip = ip
+        self.pubkey = pubkey
         key = (long(pubkey[0]), long(pubkey[1]))
-        self.cipher = PKCS1_OAEP.new(RSA.construct(key))
+        self.cipher = PKCS1_OAEP.new(RSA.construct(key))     
 
 class CndsTest:
     def __init__(self, cnds_config_path):
@@ -88,8 +90,20 @@ class CndsTest:
             join_msg["nodeip"], join_msg["nodepubkey"])
         return NodeMessage(NodeMessages.JoinResponse, {"approved":True}, self.nodes[addr].cipher)
         
+    @staticmethod
+    def get_network_info(nodes):
+        network_info = { }
+        for addr, node in nodes.iteritems():
+            network_info[node.name] = {
+                "ip": node.ip,
+                "port": addr.port,
+                "pubkey": node.pubkey,
+            }
+        return network_info
+        
     def setupPing(self, addr):
-        self.reactor.callLater(10, self.pingNode, addr)
+        pingInterval = 30
+        self.reactor.callLater(pingInterval, self.pingNode, addr)
         
     def pingNode(self, addr):
         if addr in self.nodes:
@@ -112,6 +126,7 @@ class CndsTest:
     
     def handleNodeInfoRequest(self, addr, info_req):
         print("CNDS: Node at " + addrToStr(addr) + " requesting info")
+        return NodeMessage(NodeMessages.NodeInfoResponse, CndsTest.get_network_info(self.nodes), self.cipher)
     
     def nodeConnect(self, addr, node):
         print("CNDS: Node connected from " + addrToStr(addr))

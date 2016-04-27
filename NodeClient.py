@@ -7,4 +7,14 @@ class NodeClient(Node):
         Node.__init__(self)
         self.reactor = reactor
         self.connectClient(remoteIp, remotePort)
+        
+    def connectClient(self, remoteIp, remotePort):
+        self.reactor.connectTCP(remoteIp, remotePort, NodeClientFactory(self))
+        print("Node connecting to " + addrPortToStr(remoteIp, remotePort))
 
+class NodeClientFactory(ClientFactory):
+    def __init__(self, node):
+        self.node = node
+        
+    def buildProtocol(self, addr):
+        return NodeProtocol(addr, self.node)
