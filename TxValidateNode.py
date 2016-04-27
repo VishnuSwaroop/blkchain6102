@@ -1,73 +1,109 @@
-from twisted.internet import reactor
+import sys
+from twisted.web import server, resource
+from twisted.internet import reactor, endpoints
+from twisted.internet.endpoints import TCP4ServerEndpoint
+from TxNodeUtil import *
 
-from NodeServer import NodeServer, addrToStr
-from NodeClient import NodeClient    
-from NodeMessage import *
-from node_structure import node_methods
+class TxValidateNode(resource.Resource):
+    isLeaf = True
 
-class TxValidateNode(node_methods):
-    def __init__(self, node_config_path, cnds_info_path, port_override):
-        node_methods.__init__(self)
-        self.load_config(node_config_path, cnds_info_path)
-        
-        # Override port number specified in config file if defined
-        if port_override:
-            self.nodeport = port_override
-        
+    def __init__(self, cnds_ip, local_port, local_ip):
+        resource.Resource.__init__(self)
         self.reactor = reactor
-        self.cnds = NodeClient(self.reactor, self.CNDSip, self.CNDSport)
-        self.cnds.onConnect = self.cndsOnConnect
-        self.cnds.onReceive = self.cndsDataReceived
-        
-        self.server = NodeServer(self.reactor, self.nodeip, self.nodeport, 10)
-        self.server.onConnect = self.nodeOnConnect
-        self.server.onReceive = self.nodeOnReceive
+        self.local_port = local_port
+        self.local_ip = local_ip
+        backlog = 10
+        endpoint = TCP4ServerEndpoint(reactor, self.local_port, backlog, self.local_ip)
+        endpoint.listen(server.Site(self))
+        print("Node listening for connections on " + addr_port_to_str(self.local_ip, self.local_port))
         
     def run(self):
-        print("Running node service")
         self.reactor.run()
-        
-    def cndsOnConnect(self, addr, node):
-        print("Connected to CNDS at " + addrToStr(addr))
-        return self.join_req().serialize()
-        
-    def cndsDataReceived(self, addr, data):
-        msg_type, msg = NodeMessage.deserialize(data, self.nodecipher)
-        print("Received message from CNDS at " + addrToStr(addr) + " (type " + str(msg_type) + ")")
-        
-        resp_msg = None
-        
-        # TODO: check for correct CNDS ip
-        
-        # Call appropriate handler
-        if msg_type == NodeMessages.JoinResponse:
-            resp_msg = self.handle_join_resp(msg)
-        elif msg_type == NodeMessages.PingRequest:
-            resp_msg = self.handle_ping_req(msg)
-        elif msg_type == NodeMessages.NodeInfoResponse:
-            resp_msg = self.handle_node_info_resp(msg)
-            
-        if resp_msg:
-            return resp_msg.serialize()
-
-    def broadcastMessage(self, msg):
-        for addrStr, node_info in self.network_info:
-            # TODO: need to check status of connect/send and remove node from node_info table if failed
-            client = NodeClient(self.reactor, node_info.ip, node_info.port)
-            client.send(msg.serialize())
-            
-    def nodeOnConnect(self, addr, node):
-        print("Connected to node at " + addrToStr(addr))
-            
-    def nodeOnReceive(self, addr, data):
-        msg_type, msg = NodeMessage.deserialize(data, self.nodecipher)
-        print("Received message from node at " + addrToStr(addr) + " (type " + str(msg_type) + ")")
-
-        
     
+    def handle_get(self, uri, payload_dict, hash):
+        print("GET " + uri + "\nPayload: " + str(payload_dict) + "\nHash: " + str(hash))
+        if uri == "block":
+            resp_dict = self.handle_block_lookup(payload_dict)
+            
+        return resp_dict
+        
+    def handle_post(self, uri, payload_dict, hash):
+        print("POST " + uri + "\nPayload: " + str(payload_dict) + "\nHash: " + str(hash))
+        if uri == "transaction":
+            resp_dict = self.handle_add_tx(payload_dict)
+        elif uri == "block":
+            resp_dict = self.handle_add_block(payload_dict)
+        
+    def render_response(self, request, handler):
+        request.setHeader(b"content-type", b"text/plain")
+        
+        uri = request.uri[2:]
+        
+        # TODO: set the ciphers based on which node issued the request
+        request_cipher = None   
+        response_cipher = None
+       
+        resp = None
+        payload = None
+        hash = None
+        
+        if "payload" in request.args:
+            payload = request.args["payload"]
+        if "hash" in request.args:    
+            hash = request.args["hash"]
+            
+        if payload and hash:
+            payload_dict = None
+            
+            try:
+                payload_dict = deserialize_payload(payload, hash, request_cipher)
+            except:
+                print("Failed to deserialize request:")
+                print("URI: " + str(uri))
+                print("Request Payload: " + str(payload))
+                print("Request Hash: " + str(hash))
+            
+            # The call to the handler should stay outside to allow crash if handler has error
+            if payload_dict:
+                resp_dict = handler(uri, payload_dict, hash)
+                
+                try:
+                    resp = serialize_payload(resp_dict, response_cipher)
+                except:
+                    print("Failed to serialize response:")
+                    print("URI: " + str(uri))
+                    print("Request Payload: " + str(payload_dict))
+                    print("Request Hash: " + str(hash))
+                    print("Response Payload: " + str(resp_dict))
+            
+        if resp:
+            return resp
+        else:
+            request.setResponseCode(404)
+            return "Unknown request"
     
+    def render_GET(self, request):
+        return self.render_response(request, self.handle_get)
+        
+    def render_POST(self, request):
+        return self.render_response(request, self.handle_post)
+
+def main(args):
+    cnds_ip = "localhost"
+    local_ip = "localhost"
+    local_port = 1235
     
+    # Parse command line arguments
+    for arg in args[1:]:
+        if arg.isdigit():
+            local_port = int(arg)
+        else:
+            print("Unknown argument: ", arg)
+    
+    # Run server
+    print("Starting Transaction Validation Node service")
+    node = TxValidateNode(cnds_ip, local_port, local_ip)
+    node.run()
 
-
-
-
+if __name__ == "__main__":
+    main(sys.argv)
