@@ -9,18 +9,21 @@ from zope.interface import implements
 from TxNodeUtil import *
 
 class NodeClient:
+    # TODO: create connection pool to persist client connections
+    
     @staticmethod
-    def create_request(ip, port, method, fcn, req_dict, resp_handler, req_cipher=None, resp_cipher=None):
-        client = NodeClient()
+    def create_request(ip, port, method, fcn, req_dict, resp_handler, req_cipher=None, resp_cipher=None, timeout=2.0):
+        client = NodeClient(timeout)
         client.send_request(ip, port, method, fcn, req_dict, resp_handler, req_cipher, resp_cipher)
         
     @staticmethod
     def run():
         reactor.run()
     
-    def __init__(self):
+    def __init__(self, connectTimeout):
         self.reactor = reactor
-        self.agent = Agent(self.reactor)
+        self.agent = Agent(self.reactor, connectTimeout=connectTimeout)
+        print("Agent connect timeout: {0}".format(connectTimeout))
         
     def send_request(self, ip, port, method, fcn, request_dict, response_handler, request_cipher, response_cipher):
         class StringProducer(object):

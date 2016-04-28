@@ -9,12 +9,14 @@ class TxOriginNode:
         self.cnds_ip = cnds_ip
         self.cnds_port = cnds_port
         self.tx = tx
+        
         self.get_node_info()
         
     def start(self):
         NodeClient.run()
         
     def get_node_info(self):
+        print("Retrieving node info from CNDS")
         NodeClient.create_request(self.cnds_ip, self.cnds_port, 'GET', "node", { "get_node_info": True }, self.handle_node_info_resp)
         
     def handle_node_info_resp(self, resp_dict, fail):

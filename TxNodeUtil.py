@@ -48,7 +48,7 @@ def serialize_payload(payload_dict, cipher):
     
 def deserialize_payload(msg_str, cipher):
     # Interpret HTTP binary message string
-    end = len(msg_str)-64       # TODO: should really use something like bson for this...
+    end = len(msg_str) - 64       # TODO: should really use something like bson for this...
     datahash = msg_str[end:]
     payload = msg_str[:end]
     
@@ -72,3 +72,42 @@ def deserialize_payload(msg_str, cipher):
         payload_dict = { }
         
     return payload_dict
+
+def load_node_config(node_config_path):
+    # Load from node info
+    with open(node_config_path,'r') as data_file:
+        node_config = json.load(data_file)
+        
+    # TODO: data validation on file inputs
+    name = node_config["nodename"]
+    ip = node_config["nodeip"]
+    port = node_config["nodeport"]
+    pvtkey = node_config["nodepvtkey"]
+    pubkey = node_config["nodepubkey"]
+    
+    return ip, port, pvtkey, pubkey, name
+
+def load_cnds_config(cnds_config_path):
+    # Load from CNDS info
+    with open(cnds_config_path,'r') as data_file:    
+        networkdata = json.load(data_file)
+    
+    # TODO: validation on file input
+    pubkey=networkdata["CNDSpubkey"]
+    domname=networkdata["CNDSdomname"]
+    ip=networkdata["CNDSip"]
+    port=networkdata["CNDSport"]
+    
+    return ip, port, pubkey, domname
+    
+def create_cipher(key):
+    if len(key) == 3:
+        tup_key = (long(key[0]), long(key[1]), long(key[2]))
+    elif len(key) == 2:
+        tup_key = (long(key[0]), long(key[1]))
+    else:
+        raise Exception("key should be a list with 2 or 3 elements")
+        
+    return PKCS1_OAEP.new(RSA.construct(tup_key))
+
+    

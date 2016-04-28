@@ -2,7 +2,7 @@ import sys
 from NodeServer import *
 from NodeClient import *
 
-class TxValidateNode(NodeServer):
+class TxValidateNode(NodeServer):    
     def __init__(self, cnds_ip, cnds_port, local_ip, local_port):
         NodeServer.__init__(self, local_ip, local_port)
         print("Node listening for connections on " + addr_port_to_str(self.local_ip, self.local_port))
@@ -78,7 +78,6 @@ class TxValidateNode(NodeServer):
         # TODO: remove nodes that do not respond from the list after some number of failed attempts
         pass
     
-
 def main(args):
     cnds_ip = "localhost"
     cnds_port = 1234
