@@ -1,38 +1,23 @@
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, DeferredList
-from twisted.internet.protocol import Protocol
-from twisted.web.client import Agent, HTTPConnectionPool
+from twisted.web.client import Agent
+from twisted.web.http_headers import Headers
 
-class BasicProtocol(Protocol):
-    def __init__(self, deferred):
-        self.deferred = deferred
+agent = Agent(reactor)
 
-    def dataReceived(self, bytes):
-        print(bytes)
+d = agent.request(
+    'GET',
+    'http://localhost:8080/req',
+    Headers({'User-Agent': ['Twisted Web Client Example']}),
+    None)
 
-    def connectionLost(self, reason):
-        self.deferred.callback(None)
+def cbResponse(ignored):
+    print 'Response received'
+d.addCallback(cbResponse)
 
-
-def cbRequest(response):
-    print 'Response code: ', response.code
-    finished = Deferred()
-    response.deliverBody(BasicProtocol(finished))
-    return finished
-
-pool = HTTPConnectionPool(reactor)
-agent = Agent(reactor, pool=pool)
-
-def requestGet(url):
-    d = agent.request('GET', url)
-    d.addCallback(cbRequest)
-    return d
-
-# Two requests to the same host:
-d = requestGet('http://localhost:8080/request1').addCallback(
-    lambda ign: requestGet("http://localhost:8080/request2"))
 def cbShutdown(ignored):
     reactor.stop()
-d.addCallback(cbShutdown)
+d.addBoth(cbShutdown)
 
 reactor.run()
+
+print("done")

@@ -1,95 +1,87 @@
 import sys
-from twisted.web import server, resource
-from twisted.internet import reactor, endpoints
-from twisted.internet.endpoints import TCP4ServerEndpoint
-from TxNodeUtil import *
+from NodeServer import *
+from NodeClient import *
 
-class TxValidateNode(resource.Resource):
-    isLeaf = True
-
-    def __init__(self, cnds_ip, local_port, local_ip):
-        resource.Resource.__init__(self)
-        self.reactor = reactor
-        self.local_port = local_port
-        self.local_ip = local_ip
-        backlog = 10
-        endpoint = TCP4ServerEndpoint(reactor, self.local_port, backlog, self.local_ip)
-        endpoint.listen(server.Site(self))
+class TxValidateNode(NodeServer):
+    def __init__(self, cnds_ip, cnds_port, local_ip, local_port):
+        NodeServer.__init__(self, local_ip, local_port)
         print("Node listening for connections on " + addr_port_to_str(self.local_ip, self.local_port))
+        self.request_network_info(cnds_ip, cnds_port)
         
     def run(self):
         self.reactor.run()
+        
+    def request_network_info(self, cnds_ip, cnds_port):
+        req_dict = { "get_nodes": True }
+        NodeClient.create_request(cnds_ip, cnds_port, "GET", "nodes", req_dict, self.handle_network_info_resp)
     
-    def handle_get(self, uri, payload_dict, hash):
-        print("GET " + uri + "\nPayload: " + str(payload_dict) + "\nHash: " + str(hash))
-        if uri == "block":
+    def handle_network_info_resp(self, payload_dict, fail):
+        if not fail:
+            self.network_info = payload_dict
+            print("Network info retrieved: " + str(self.network_info))
+        else:
+            raise Exception("Failed to get network info: " + str(fail))
+    
+    def handle_get(self, fcn, payload_dict):
+        print("Function [" + fcn + "] Payload: " + str(payload_dict))
+        resp_dict = None
+        if fcn == "block":
             resp_dict = self.handle_block_lookup(payload_dict)
             
         return resp_dict
         
-    def handle_post(self, uri, payload_dict, hash):
-        print("POST " + uri + "\nPayload: " + str(payload_dict) + "\nHash: " + str(hash))
-        if uri == "transaction":
+    def handle_post(self, fcn, payload_dict):
+        print("Function [" + fcn + "] Payload: " + str(payload_dict))
+        resp_dict = None
+        if fcn == "add_tx":
             resp_dict = self.handle_add_tx(payload_dict)
-        elif uri == "block":
+        elif fcn == "new_tx":
+            resp_dict = self.handle_new_tx(payload_dict)
+        elif fcn == "block":
             resp_dict = self.handle_add_block(payload_dict)
-        
-    def render_response(self, request, handler):
-        request.setHeader(b"content-type", b"text/plain")
-        
-        uri = request.uri[2:]
-        
-        # TODO: set the ciphers based on which node issued the request
-        request_cipher = None   
-        response_cipher = None
-       
-        resp = None
-        payload = None
-        hash = None
-        
-        if "payload" in request.args:
-            payload = request.args["payload"]
-        if "hash" in request.args:    
-            hash = request.args["hash"]
             
-        if payload and hash:
-            payload_dict = None
-            
-            try:
-                payload_dict = deserialize_payload(payload, hash, request_cipher)
-            except:
-                print("Failed to deserialize request:")
-                print("URI: " + str(uri))
-                print("Request Payload: " + str(payload))
-                print("Request Hash: " + str(hash))
-            
-            # The call to the handler should stay outside to allow crash if handler has error
-            if payload_dict:
-                resp_dict = handler(uri, payload_dict, hash)
-                
-                try:
-                    resp = serialize_payload(resp_dict, response_cipher)
-                except:
-                    print("Failed to serialize response:")
-                    print("URI: " + str(uri))
-                    print("Request Payload: " + str(payload_dict))
-                    print("Request Hash: " + str(hash))
-                    print("Response Payload: " + str(resp_dict))
-            
-        if resp:
-            return resp
-        else:
-            request.setResponseCode(404)
-            return "Unknown request"
+        return resp_dict
     
-    def render_GET(self, request):
-        return self.render_response(request, self.handle_get)
-        
-    def render_POST(self, request):
-        return self.render_response(request, self.handle_post)
+    def handle_new_tx(self, tx):
+        print("Adding transaction (origin)")
+        # TODO: validate transaction
+        # TODO: add to unconfirmed pool (uc)
+        # TODO: if uc overflows, begin working on proof of work (in separate thread?)
+        # TODO: if add block received before finishing proof of work, abort, prune uc, and await more transactions
+        self.broadcast_message("POST", "add_tx", tx)
+        return { "status": "ok" }
+    
+    def handle_add_tx(self, tx):
+        print("Adding transaction")
+        # TODO: validate transaction
+        # TODO: add to unconfirmed pool (uc)
+        # TODO: if uc overflows, begin working on proof of work (in separate thread?)
+        # TODO: if add block received before finishing proof of work, abort, prune uc, and await more transactions
+        return { "status": "ok" }
+    
+    def handle_add_block(self, block):
+        # TODO: validate block
+        # TODO: validate transactions
+        self.broadcast_message("POST", "block", block)
+        return { "status": "ok" }
+    
+    def broadcast_message(self, method, fcn, msg_dict):
+        print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
+        for node_name, node_info in self.network_info.iteritems():
+            ip = node_info["node_ip"]
+            port = node_info["node_port"]
+            if not (ip == self.local_ip and port == self.local_port):
+                print("Broadcasting to " + addr_port_to_str(ip, port))
+                NodeClient.create_request(ip, port, method, fcn, msg_dict, None)
+    
+    def handle_broadcast_resp(self, resp_dict, fail):
+        # TODO: remove nodes that do not respond from the list after some number of failed attempts
+        pass
+    
 
 def main(args):
     cnds_ip = "localhost"
+    cnds_port = 1234
     local_ip = "localhost"
     local_port = 1235
     
@@ -102,7 +94,7 @@ def main(args):
     
     # Run server
     print("Starting Transaction Validation Node service")
-    node = TxValidateNode(cnds_ip, local_port, local_ip)
+    node = TxValidateNode(cnds_ip, cnds_port, local_port, local_ip)
     node.run()
 
 if __name__ == "__main__":

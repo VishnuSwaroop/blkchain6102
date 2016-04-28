@@ -32,23 +32,32 @@ def decrypt_payload(encrypted_payload_str, cipher):
     
 def serialize_payload(payload_dict, cipher):
     # Serialize message dictionary to JSON payload
-    payload = json.dumps(payload_dict, indent=4, sort_keys=True)
+    payload = json.dumps(payload_dict)
     
     # Encrypt JSON payload
     if cipher:
         payload = NodeMessage.encrypt_payload(payload, cipher)
         
     # Compute hash of encrypted payload
-    datahash = SHA512.new(bytes(str(payload)))
-        
-    return "".join("payload=", payload, "\nhash=", datahash.digest(), "\n")
+    datahash = SHA512.new(bytes(str(payload))).digest()
     
-def deserialize_payload(payload, hash, cipher):    
+    # Create binary message string
+    msg_str = "".join([payload, datahash])  # TODO: should really use something like bson for this...
+        
+    return msg_str
+    
+def deserialize_payload(msg_str, cipher):
+    # Interpret HTTP binary message string
+    end = len(msg_str)-64       # TODO: should really use something like bson for this...
+    datahash = msg_str[end:]
+    payload = msg_str[:end]
+    
     # Compute hash of encrypted data
     computed_hash = SHA512.new(payload)
     
     # Verify hash
-    if computed_hash.digest() != hash:
+    if computed_hash.digest() != datahash:
+        print("Payload deserialization failed due to invalid hash")
         return None
         
     # Decrypt message
@@ -57,5 +66,9 @@ def deserialize_payload(payload, hash, cipher):
     
     # Get payload dictionary
     payload_dict = json.loads(payload)
+
+    # If json.load returns None, an empty dictionary was sent
+    if not payload_dict:
+        payload_dict = { }
         
     return payload_dict
