@@ -1,13 +1,13 @@
 from NodeClient import *
     
 class TxOriginNode:
-    def __init__(self, cnds_ip, cnds_port, tx):
+    def __init__(self, cnds_info, tx):
         self.node_ip = None
         self.node_port = None
         self.node_pubkey = None
         
-        self.cnds_ip = cnds_ip
-        self.cnds_port = cnds_port
+        self.cnds_ip = cnds_info["CNDSip"]
+        self.cnds_port = cnds_info["CNDSport"]
         self.tx = tx
         
         self.get_node_info()
@@ -53,21 +53,27 @@ import sys
 # from TxOriginNode import *
 
 def main(args):
-    cnds_ip = "localhost"
-    cnds_port = 1234
+    cnds_info_path = None
+    cnds_info = {
+        "CNDSdomname": "leader1",
+        "CNDSip": "localhost",
+        "CNDSport": 1234,
+        "CNDSpubkey": None
+    }
     
     # Parse command line arguments
     for arg in args[1:]:
-        if arg.isdigit():
-            cnds_port = int(arg)
-        else:
-            cnds_ip = str(arg)
+        cnds_info_path = arg
+    
+    # Load CNDS configuration
+    if cnds_info_path:
+        cnds_info = load_cnds_config(cnds_info_path)
     
     # Run server
     print("Starting Node")
     # try:
     tx = { "newtx": "mytxinfo" }
-    node = TxOriginNode(cnds_ip, cnds_port, tx)
+    node = TxOriginNode(cnds_info, tx)
     node.start()
     # except Exception as exc:
     #   print("Fatal Error: " + str(exc))

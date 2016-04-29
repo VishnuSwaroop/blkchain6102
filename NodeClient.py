@@ -23,7 +23,7 @@ class NodeClient:
     def __init__(self, connectTimeout):
         self.reactor = reactor
         self.agent = Agent(self.reactor, connectTimeout=connectTimeout)
-        print("Agent connect timeout: {0}".format(connectTimeout))
+        # print("Agent connect timeout: {0}".format(connectTimeout))
         
     def send_request(self, ip, port, method, fcn, request_dict, response_handler, request_cipher, response_cipher):
         class StringProducer(object):

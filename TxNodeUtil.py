@@ -1,4 +1,6 @@
 import json
+import bson
+from uuid import uuid4
 from Crypto import Random
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
@@ -33,6 +35,7 @@ def decrypt_payload(encrypted_payload_str, cipher):
 def serialize_payload(payload_dict, cipher):
     # Serialize message dictionary to JSON payload
     payload = json.dumps(payload_dict)
+    # payload = bson.BSON.encode(payload_dict)
     
     # Encrypt JSON payload
     if cipher:
@@ -53,7 +56,7 @@ def deserialize_payload(msg_str, cipher):
     payload = msg_str[:end]
     
     # Compute hash of encrypted data
-    computed_hash = SHA512.new(payload)
+    computed_hash = SHA512.new(bytes(str(payload)))
     
     # Verify hash
     if computed_hash.digest() != datahash:
@@ -66,6 +69,7 @@ def deserialize_payload(msg_str, cipher):
     
     # Get payload dictionary
     payload_dict = json.loads(payload)
+    # payload_dict = bson.BSON.decode(payload)
 
     # If json.load returns None, an empty dictionary was sent
     if not payload_dict:
@@ -73,32 +77,63 @@ def deserialize_payload(msg_str, cipher):
         
     return payload_dict
 
+def generate_node_config(node_config_path, nodeip, nodeport):
+    nodename = str(uuid4())
+    # TODO: this routine should validate nodeip/nodeport
+    #Node public and private keys
+    random_generator = Random.new().read
+    key1 = RSA.generate(4096, random_generator)
+    nodepvtkey=(long(key1.publickey().n),long(key1.publickey().e),long(key1.d))
+    nodepubkey=(long(key1.publickey().n),long(key1.publickey().e))
+    
+    #Convert to json and store on disk
+    node_config = {"nodename":nodename,
+        "nodeip": nodeip,
+        "nodeport": nodeport,
+        "nodepubkey": nodepubkey,
+        "nodepvtkey": nodepvtkey}
+    
+    with open(node_config_path, 'w') as outfile:
+        json.dump(node_config, outfile, indent=4, sort_keys=True)
+
 def load_node_config(node_config_path):
     # Load from node info
     with open(node_config_path,'r') as data_file:
         node_config = json.load(data_file)
         
     # TODO: data validation on file inputs
-    name = node_config["nodename"]
-    ip = node_config["nodeip"]
-    port = node_config["nodeport"]
-    pvtkey = node_config["nodepvtkey"]
-    pubkey = node_config["nodepubkey"]
+    # name = node_config["nodename"]
+    # ip = node_config["nodeip"]
+    # port = node_config["nodeport"]
+    # pvtkey = node_config["nodepvtkey"]
+    # pubkey = node_config["nodepubkey"]
+    #     
+    # return ip, port, pvtkey, pubkey, name
+    return node_config
+
+def create_cnds_info_file(cnds_info_path, name, ip, port, pubkey):    
+    #Convert to json and store on disk
+    cnds_info = {"CNDSdomname":name,
+        "CNDSip": ip,
+        "CNDSport": port,
+        "CNDSpubkey": pubkey}
     
-    return ip, port, pvtkey, pubkey, name
+    with open(cnds_info_path, 'w') as outfile:
+        json.dump(cnds_info, outfile, indent=4, sort_keys=True)
 
 def load_cnds_config(cnds_config_path):
     # Load from CNDS info
     with open(cnds_config_path,'r') as data_file:    
-        networkdata = json.load(data_file)
+        cnds_config = json.load(data_file)
     
     # TODO: validation on file input
-    pubkey=networkdata["CNDSpubkey"]
-    domname=networkdata["CNDSdomname"]
-    ip=networkdata["CNDSip"]
-    port=networkdata["CNDSport"]
-    
-    return ip, port, pubkey, domname
+    # pubkey=networkdata["CNDSpubkey"]
+    # domname=networkdata["CNDSdomname"]
+    # ip=networkdata["CNDSip"]
+    # port=networkdata["CNDSport"]
+    # 
+    # return ip, port, pubkey, domname
+    return cnds_config
     
 def create_cipher(key):
     if len(key) == 3:

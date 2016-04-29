@@ -6,11 +6,11 @@ from TxNodeUtil import *
 class NodeServer(resource.Resource):
     isLeaf = True
     
-    def __init__(self, local_port, local_ip):
+    def __init__(self, local_ip, local_port):
         resource.Resource.__init__(self)
         self.reactor = reactor
-        self.local_port = local_port
         self.local_ip = local_ip
+        self.local_port = local_port
         backlog = 10
         endpoint = TCP4ServerEndpoint(reactor, self.local_port, backlog, self.local_ip)
         endpoint.listen(server.Site(self))

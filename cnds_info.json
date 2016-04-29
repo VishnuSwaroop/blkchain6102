@@ -1,0 +1,6 @@
+{
+    "CNDSdomname": "leader1", 
+    "CNDSip": "localhost", 
+    "CNDSport": 1234, 
+    "CNDSpubkey": null
+}

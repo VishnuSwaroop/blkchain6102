@@ -4,21 +4,21 @@ from subprocess import Popen, CREATE_NEW_CONSOLE
 from TxOriginNode import *
 
 def main(args):
-    cnds_ip = "localhost"
-    cnds_port = 1234
+    cnds_info_path = "cnds_info.json"
     
     network_info = {
-        "node1": { "node_ip": "localhost", "node_port": "1235", "node_pubkey": None },
-        "node2": { "node_ip": "localhost", "node_port": "1236", "node_pubkey": None },
+        "node1": "node1_config.json",
+        "node2": "node2_config.json",
+        "node3": "node2_config.json",
     }
     
-    Popen([executable, 'CndsNodeTest.py', str(cnds_ip), str(cnds_port)], creationflags=CREATE_NEW_CONSOLE)
+    Popen([executable, 'CndsNodeTest.py', cnds_info_path], creationflags=CREATE_NEW_CONSOLE)
     
-    for name, node in network_info.iteritems():
-        Popen([executable, 'TxValidateNode.py', str(node["node_ip"]), str(node["node_port"])], creationflags=CREATE_NEW_CONSOLE)
+    for name, node_config_path in network_info.iteritems():
+        Popen([executable, 'TxValidateNode.py', node_config_path], creationflags=CREATE_NEW_CONSOLE)
      
-    execfile('TxOriginNode.py')   
-    #Popen([executable, 'TxOriginNode.py'])
+    #execfile('TxOriginNode.py', cnds_info_path)   
+    Popen([executable, 'TxOriginNode.py', cnds_info_path])
 
 if __name__ == "__main__":
     main(sys.argv)
