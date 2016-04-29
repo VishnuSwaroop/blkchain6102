@@ -1,4 +1,5 @@
 import time
+from random import randint
 from twisted.internet import reactor, threads
 
 class ProofOfWork:
@@ -15,7 +16,8 @@ class ProofOfWork:
     
         def perform(self):
             print("Starting proof of work")
-            for i in xrange(1, 10):
+            t = randint(0, 10)+5
+            for i in xrange(1, t):
                 time.sleep(1)  # TODO: replace with hashcash
                 if self.aborted:
                     print("Aborting proof of work thread")

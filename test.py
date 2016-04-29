@@ -9,7 +9,6 @@ def main(args):
     network_info = {
         "node1": "node1_config.json",
         "node2": "node2_config.json",
-        "node3": "node2_config.json",
     }
     
     Popen([executable, 'CndsNodeTest.py', cnds_info_path], creationflags=CREATE_NEW_CONSOLE)

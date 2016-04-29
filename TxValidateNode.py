@@ -7,6 +7,7 @@ class TxValidateNode(NodeServer):
     def __init__(self, cnds_info, node_config):
         self.reactor = reactor
         self.uc_pool = []
+        self.proof_of_work = None
         
         self.local_ip = node_config["nodeip"]
         self.local_port = node_config["nodeport"]
@@ -72,37 +73,41 @@ class TxValidateNode(NodeServer):
         return resp_dict
     
     def handle_new_tx(self, tx):
-        print("Adding transaction (origin)")
-        # TODO: validate transaction
-        # TODO: add to unconfirmed pool (uc)
-        # TODO: if uc overflows, begin working on proof of work (in separate thread?)
-        # TODO: if add block received before finishing proof of work, abort, prune uc, and await more transactions
+        print("Received new transaction")
+        # TODO: could refuse to broadcast transaction until after it is validated?
         self.broadcast_message("POST", "add_tx", tx)
-        return { "status": "ok" }
+        resp_dict = self.handle_add_tx(tx)
+        return resp_dict
     
     def handle_add_tx(self, tx):
         print("Adding transaction")
+        
         # TODO: validate transaction
+        
         # Add to unconfirmed pool (uc)
         self.uc_pool.append(tx)
+        print("UC Pool Size: {0}".format(len(self.uc_pool)))
         
         # If uc overflows, begin working on proof of work
-        if len(self.uc_pool) > 4:
-            block = self.uc_pool
-            self.uc_pool = []
-            self.start_proof_of_work(block)
+        max_size = 4
+        if len(self.uc_pool) >= max_size:
+            block = self.uc_pool[:max_size]     # only take up to the max size for the current block
+            self.uc_pool = self.uc_pool[max_size:]
+            try:
+                self.start_proof_of_work(block)
+            except:
+                self.return_aborted_transactions(block)
             
         return { "status": "ok" }
     
     def handle_add_block(self, block):
         # TODO: validate block
-        
         # TODO: validate transactions
         
         # Abort current proof of work
         old_uc_pool = self.abort_proof_of_work()
         
-        # TODO: add block to blockchain
+        # TODO: add block to local blockchain
         
         return { "status": "ok" }
     
@@ -133,7 +138,7 @@ class TxValidateNode(NodeServer):
         
     def return_aborted_transactions(self, old_uc_pool):
         print("Txs from aborted block returned to UC pool")
-        self.uc_pool.append(old_uc_pool)    
+        self.uc_pool.extend(old_uc_pool)    
     
     def broadcast_message(self, method, fcn, msg_dict):
         if self.network_info:

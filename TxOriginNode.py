@@ -1,20 +1,22 @@
 from NodeClient import *
     
 class TxOriginNode:
-    def __init__(self, cnds_info, tx):
+    def __init__(self, cnds_info, txs):
+        self.reactor = None
         self.node_ip = None
         self.node_port = None
         self.node_pubkey = None
         
         self.cnds_ip = cnds_info["CNDSip"]
         self.cnds_port = cnds_info["CNDSport"]
-        self.tx = tx
+        
+        self.txs = txs
         
         self.get_node_info()
         
     def start(self):
         NodeClient.run()
-        
+    
     def get_node_info(self):
         print("Retrieving node info from CNDS")
         NodeClient.create_request(self.cnds_ip, self.cnds_port, 'GET', "node", { "get_node_info": True }, self.handle_node_info_resp)
@@ -28,12 +30,14 @@ class TxOriginNode:
             print("TxValidateNode to contact is at {0}:{1}".format(self.node_ip, self.node_port))
             
             # Send transaction if this succeeds
-            if self.tx:
-                self.new_tx(self.tx)
+            if self.txs:
+                for tx in self.txs:
+                    self.send_new_tx(tx)
+                    # self.reactor.callLater(1, self.send_new_tx, tx)
         else:    
             raise Exception("Failed to get node info: " + str(fail))
         
-    def new_tx(self, tx):
+    def send_new_tx(self, tx):
         print("Sending transaction: " + str(tx))
         NodeClient.create_request(self.node_ip, self.node_port, 'POST', "new_tx", tx, self.handle_new_tx_resp)
         
@@ -72,8 +76,10 @@ def main(args):
     # Run server
     print("Starting Node")
     # try:
-    tx = { "newtx": "mytxinfo" }
-    node = TxOriginNode(cnds_info, tx)
+    txs = []
+    for i in xrange(1, 5*2):
+        txs.append({"tx{0}".format(i): "txinfo"})
+    node = TxOriginNode(cnds_info, txs)
     node.start()
     # except Exception as exc:
     #   print("Fatal Error: " + str(exc))

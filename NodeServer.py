@@ -56,9 +56,9 @@ class NodeServer(resource.Resource):
             return "Unknown request"    # TODO: this should probably handle the JSON serialization of the payload and hash?
     
     def render_GET(self, request):
-        print("GET request: " + request.uri)
+        #print("GET request: " + request.uri)
         return self.render_response(request, self.handle_get)
         
     def render_POST(self, request):
-        print("POST request: " + request.uri)
+        #print("POST request: " + request.uri)
         return self.render_response(request, self.handle_post)
