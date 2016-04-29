@@ -18,6 +18,8 @@ class NodeServer(resource.Resource):
     def render_response(self, request, handler):
         request.setHeader(b"content-type", b"application/octet-stream")
         
+        client_ip = request.getClientIP()
+        
         fcn = request.uri[1:]
         
         # TODO: set the ciphers based on which node issued the request
@@ -39,7 +41,7 @@ class NodeServer(resource.Resource):
         
         # The call to the handler should stay outside to allow crash if handler has error
         if payload_dict:
-            resp_dict = handler(fcn, payload_dict)
+            resp_dict = handler(fcn, payload_dict, client_ip)
             
             try:
                 resp_str = serialize_payload(resp_dict, response_cipher)

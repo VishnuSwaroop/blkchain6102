@@ -11,8 +11,8 @@ class CndsNodeTest(NodeServer):
     def run(self):
         self.reactor.run()
     
-    def handle_get(self, fcn, payload_dict):
-        print("Function [" + fcn + "] Payload: " + str(payload_dict))
+    def handle_get(self, fcn, payload_dict, client_ip):
+        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_ip, str(payload_dict)))
         resp_dict = None
         if fcn == "node":
             print("Responding to node info request")
@@ -36,8 +36,8 @@ class CndsNodeTest(NodeServer):
             
         return resp_dict
         
-    def handle_post(self, fcn, payload_dict):
-        print("Function [" + fcn + "] Payload: " + str(payload_dict))
+    def handle_post(self, fcn, payload_dict, client_ip):
+        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_ip, str(payload_dict)))
         resp_dict = None
         if fcn == "join":
             resp_dict = self.handle_join(payload_dict)

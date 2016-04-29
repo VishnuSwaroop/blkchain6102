@@ -32,10 +32,11 @@ def decrypt_payload(encrypted_payload_str, cipher):
     #    blocks.append(cipher.decrypt(encrypted_payload_str[i:end_stride]))
     #return "".join(blocks)
     
-def serialize_payload(payload_dict, cipher):
+def serialize_payload(payload_dict, cipher, encode=json.dumps):
     # Serialize message dictionary to JSON payload
-    payload = json.dumps(payload_dict)
+    # payload = json.dumps(payload_dict)
     # payload = bson.BSON.encode(payload_dict)
+    payload = encode(payload_dict)
     
     # Encrypt JSON payload
     if cipher:
@@ -48,8 +49,11 @@ def serialize_payload(payload_dict, cipher):
     msg_str = "".join([payload, datahash])  # TODO: should really use something like bson for this...
         
     return msg_str
+
+def decode_bson(payload_str):
+    return bson.BSON(payload_str).decode()
     
-def deserialize_payload(msg_str, cipher):
+def deserialize_payload(msg_str, cipher, decode=json.loads):
     # Interpret HTTP binary message string
     end = len(msg_str) - 64       # TODO: should really use something like bson for this...
     datahash = msg_str[end:]
@@ -68,8 +72,9 @@ def deserialize_payload(msg_str, cipher):
         payload = NodeMessage.decrypt_payload(payload, cipher)
     
     # Get payload dictionary
-    payload_dict = json.loads(payload)
+    # payload_dict = json.loads(payload)
     # payload_dict = bson.BSON.decode(payload)
+    payload_dict = decode(payload)
 
     # If json.load returns None, an empty dictionary was sent
     if not payload_dict:

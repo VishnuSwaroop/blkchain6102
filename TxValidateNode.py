@@ -8,6 +8,7 @@ class TxValidateNode(NodeServer):
         self.reactor = reactor
         self.uc_pool = []
         self.proof_of_work = None
+        self.network_info = None
         
         self.local_ip = node_config["nodeip"]
         self.local_port = node_config["nodeport"]
@@ -51,19 +52,31 @@ class TxValidateNode(NodeServer):
             self.start_server()
         else:
             raise Exception("Failed to get network info: " + str(fail))
+        
+    def check_and_add_node_info(self, client_ip):
+        # TODO: was there something to do here?
+        if not client_ip in self.network_info:
+            print("Discovered new node at {0}".format(client_ip))
+            client_port = None  # TODO: how do we get this without having to query CNDS?
+            client_pubkey = None
+            node_info = { "node_ip": client_ip, "node_port": client_port, "node_pubkey": client_pubkey }
+            self.network_info[client_ip] = node_info
+            # TODO: schedule request to get other info?
     
-    def handle_get(self, fcn, payload_dict):
-        print("Function [" + fcn + "] Payload: " + str(payload_dict))
+    def handle_get(self, fcn, payload_dict, client_ip):
+        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_ip, str(payload_dict)))
         resp_dict = None
-        if fcn == "block":
-            resp_dict = self.handle_block_lookup(payload_dict)
+        if fcn == "blockchain":
+            resp_dict = self.handle_get_blockchain(payload_dict)
             
         return resp_dict
         
-    def handle_post(self, fcn, payload_dict):
-        print("Function [" + fcn + "] Payload: " + str(payload_dict))
+    def handle_post(self, fcn, payload_dict, client_ip):
+        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_ip, str(payload_dict)))
         resp_dict = None
+        
         if fcn == "add_tx":
+            self.check_and_add_node_info(client_ip)
             resp_dict = self.handle_add_tx(payload_dict)
         elif fcn == "new_tx":
             resp_dict = self.handle_new_tx(payload_dict)
@@ -74,9 +87,9 @@ class TxValidateNode(NodeServer):
     
     def handle_new_tx(self, tx):
         print("Received new transaction")
+        resp_dict = self.handle_add_tx(tx)
         # TODO: could refuse to broadcast transaction until after it is validated?
         self.broadcast_message("POST", "add_tx", tx)
-        resp_dict = self.handle_add_tx(tx)
         return resp_dict
     
     def handle_add_tx(self, tx):
@@ -88,6 +101,9 @@ class TxValidateNode(NodeServer):
         self.uc_pool.append(tx)
         print("UC Pool Size: {0}".format(len(self.uc_pool)))
         
+        # dict_state = self.check_overflow()
+        # if dict_state:
+        #     self.generate_block(dict_state)
         # If uc overflows, begin working on proof of work
         max_size = 4
         if len(self.uc_pool) >= max_size:
@@ -100,14 +116,22 @@ class TxValidateNode(NodeServer):
             
         return { "status": "ok" }
     
-    def handle_add_block(self, block):
+    def handle_add_block(self, block, sender):
         # TODO: validate block
         # TODO: validate transactions
         
-        # Abort current proof of work
-        old_uc_pool = self.abort_proof_of_work()
+        # TODO: read blockchain from disk
+        local_chain = None
         
-        # TODO: add block to local blockchain
+        # TODO: if block.prevhash in local_chain:
+            # Abort current proof of work
+        old_uc_pool = self.abort_proof_of_work()
+            # TODO: add to blockchain
+            # TODO: write blockchain back to disk    
+        # TODO: else:
+            # TODO: query sender's chain until it is found
+            # remote_chain = self.request_blockchain(
+            # TODO: check for longer chain and replace local chain if sender's is longer
         
         return { "status": "ok" }
     
@@ -155,6 +179,13 @@ class TxValidateNode(NodeServer):
     def handle_broadcast_resp(self, resp_dict, fail):
         # TODO: remove nodes that do not respond from the list after some number of failed attempts
         pass
+    
+    def handle_get_blockchain(self, payload_dict):
+        start_hash = payload_dict["start_hash"]
+        num_blocks = payload_dict["num_blocks"]
+        # TODO: load in blockchain
+        # TODO: search for start_hash
+        # TODO: if present, send start_hash-num_blocks blocks to client
     
 def main(args):
     node_config_file = None
