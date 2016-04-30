@@ -10,10 +10,8 @@ class TxValidateNode(NodeServer):
         self.proof_of_work = None
         self.network_info = None
         
-        self.local_ip = node_config["nodeip"]
-        self.local_port = node_config["nodeport"]
-        self.cnds_ip = cnds_info["CNDSip"]
-        self.cnds_port = cnds_info["CNDSport"]
+        self.local_info = node_config
+        self.cnds_info = cnds_info
         
         self.request_join()
         
@@ -22,13 +20,13 @@ class TxValidateNode(NodeServer):
         
     def start_server(self):
         print("Starting transaction validation node server")
-        NodeServer.__init__(self, self.local_ip, self.local_port)
-        print("Node listening for connections on " + addr_port_to_str(local_ip, local_port))
+        NodeServer.__init__(self, self.local_info)
+        print("Node listening for connections on {0}".format(self.local_info))
         
     def request_join(self):
         print("Requesting join")
         req_dict = { "join": True }
-        NodeClient.create_request(self.cnds_ip, self.cnds_port, "POST", "join", req_dict, self.handle_join_resp)
+        NodeClient.create_request(self.local_info, self.cnds_info, "POST", "join", req_dict, self.handle_join_resp)
         
     def handle_join_resp(self, payload_dict, fail):
         if not fail:
@@ -43,45 +41,53 @@ class TxValidateNode(NodeServer):
     def request_network_info(self):
         print("Requesting network info")
         req_dict = { "get_nodes": True }
-        NodeClient.create_request(self.cnds_ip, self.cnds_port, "GET", "network", req_dict, self.handle_network_info_resp)
+        NodeClient.create_request(self.local_info, self.cnds_info, "GET", "network", req_dict, self.handle_network_info_resp)
     
     def handle_network_info_resp(self, payload_dict, fail):
+        print("Network info response received")
         if not fail:
-            self.network_info = payload_dict
-            print("Network info retrieved: " + str(self.network_info))
-            self.start_server()
+            self.network_info = TxValidateNode.get_network_info_from_resp(payload_dict)
+            
+            if self.network_info:
+                print("Network info retrieved: " + str(self.network_info))
+                self.start_server()
+            else:
+                raise Exception("Failed to get network info. Invalid response from CNDS")
         else:
             raise Exception("Failed to get network info: " + str(fail))
         
-    def check_and_add_node_info(self, client_ip):
+    @staticmethod
+    def get_network_info_from_resp(resp):
+        network_info = { }
+        for name, node_dict in resp.iteritems():
+            network_info[name] = NodeInfo.from_dict(node_dict)
+        return network_info
+        
+    def check_and_add_node_info(self, client_info):
         # TODO: was there something to do here?
-        if not client_ip in self.network_info:
-            print("Discovered new node at {0}".format(client_ip))
-            client_port = None  # TODO: how do we get this without having to query CNDS?
-            client_pubkey = None
-            node_info = { "node_ip": client_ip, "node_port": client_port, "node_pubkey": client_pubkey }
-            self.network_info[client_ip] = node_info
-            # TODO: schedule request to get other info?
+        if not client_info.name in self.network_info:
+            print("Discovered new node at {0}".format(client_info))
+            self.network_info[client_info.name] = client_info
     
-    def handle_get(self, fcn, payload_dict, client_ip):
-        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_ip, str(payload_dict)))
+    def handle_get(self, fcn, payload_dict, client_info):
+        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, payload_dict))
         resp_dict = None
         if fcn == "blockchain":
             resp_dict = self.handle_get_blockchain(payload_dict)
             
         return resp_dict
         
-    def handle_post(self, fcn, payload_dict, client_ip):
-        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_ip, str(payload_dict)))
+    def handle_post(self, fcn, payload_dict, client_info):
+        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, str(payload_dict)))
         resp_dict = None
         
         if fcn == "add_tx":
-            self.check_and_add_node_info(client_ip)
+            self.check_and_add_node_info(client_info)
             resp_dict = self.handle_add_tx(payload_dict)
         elif fcn == "new_tx":
             resp_dict = self.handle_new_tx(payload_dict)
         elif fcn == "block":
-            resp_dict = self.handle_add_block(payload_dict)
+            resp_dict = self.handle_add_block(payload_dict, client_info)
             
         return resp_dict
     
@@ -116,20 +122,25 @@ class TxValidateNode(NodeServer):
             
         return { "status": "ok" }
     
-    def handle_add_block(self, block, sender):
+    def handle_add_block(self, block, client_info):
         # TODO: validate block
         # TODO: validate transactions
         
-        # TODO: read blockchain from disk
+        # TODO: Read blockchain from disk
         local_chain = None
+        # TODO: Determine chain length
+        local_chain_len = 0
+        # TODO: Read most recent hash of local chain
+        latest_hash = None
         
-        # TODO: if block.prevhash in local_chain:
+        if block.previoushash == latest_hash:
             # Abort current proof of work
-        old_uc_pool = self.abort_proof_of_work()
+            old_uc_pool = self.abort_proof_of_work()
             # TODO: add to blockchain
             # TODO: write blockchain back to disk    
-        # TODO: else:
-            # TODO: query sender's chain until it is found
+        else:
+            pass
+            # TODO: query sender's chain for previous hash of the block recently received
             # remote_chain = self.request_blockchain(
             # TODO: check for longer chain and replace local chain if sender's is longer
         
@@ -168,11 +179,9 @@ class TxValidateNode(NodeServer):
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
             for node_name, node_info in self.network_info.iteritems():
-                ip = node_info["node_ip"]
-                port = node_info["node_port"]
-                if not (ip == self.local_ip and port == self.local_port):
-                    print("Broadcasting to " + addr_port_to_str(ip, port))
-                    NodeClient.create_request(ip, port, method, fcn, msg_dict, None)
+                if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
+                    print("Broadcasting to {0}".format(node_info))
+                    NodeClient.create_request(self.local_info, node_info, method, fcn, msg_dict, None)
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
     
@@ -183,28 +192,42 @@ class TxValidateNode(NodeServer):
     def handle_get_blockchain(self, payload_dict):
         start_hash = payload_dict["start_hash"]
         num_blocks = payload_dict["num_blocks"]
+        
+        if not start_hash:
+            # TODO: read latest hash from disk
+            start_hash = None
+        
         # TODO: load in blockchain
-        # TODO: search for start_hash
-        # TODO: if present, send start_hash-num_blocks blocks to client
+        local_chain = None
+        
+        chain_segment = { }
+        
+        # Read segment of chain starting at start_hash and going back num_blocks
+        if start_hash in local_chain:
+            cur_hash = start_hash
+            for i in xrange(0, num_blocks):
+                if cur_hash in local_chain:
+                    chain_segment[cur_hash] = local_chain[cur_hash]
+                    cur_hash = chain_segment[cur_hash].previoushash
+                else:
+                    break
+        return chain_segment
+        
+    def request_blocks(self, node_info, num_blocks, start_hash):
+        print("Requesting blocks from {0}".format(node_info))
+        req_dict = { "num_blocks": num_blocks, "start_hash": start_hash }
+        NodeClient.create_request(self.local_info, node_info, "GET", "blocks", req_dict, resp_handler)
+        
+    def handle_blocks_response(self, payload_dict, sender_info):
+        print("Blocks received from {0}".format(sender_info))
+        pass
     
 def main(args):
     node_config_file = None
     cnds_info_file = None
     
-    cnds_info = {
-        "CNDSdomname": "leader1",
-        "CNDSip": "localhost",
-        "CNDSport": 1234,
-        "CNDSpubkey": None
-    }
-   
-    node_config = {
-        "nodeip": "localhost",
-        "nodeport": 1235,
-        "nodename": "node1",
-        "nodepvtkey": None,
-        "nodepubkey": None
-    }
+    cnds_info = NodeInfo("leader1", "localhost", 1234)
+    node_config = NodeInfo("node1", "localhost", 1235)
         
     # Parse command line arguments
     for arg in args[1:]:
@@ -218,7 +241,7 @@ def main(args):
         node_config = load_node_config(node_config_file)
         
     if cnds_info_file:
-        cnds_info = load_cnds_config(cnds_info_file)
+        cnds_info = load_node_config(cnds_info_file)
     
     # print("Node Configuration: " + str(node_config))
     # print("CNDS Configuration: " + str(cnds_info))

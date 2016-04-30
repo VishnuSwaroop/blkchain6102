@@ -1,6 +1,6 @@
 {
-    "CNDSdomname": "leader1", 
-    "CNDSip": "localhost", 
-    "CNDSport": 1234, 
-    "CNDSpubkey": null
+    "name": "leader1", 
+    "ip": "localhost", 
+    "port": 1234, 
+    "pubkey": null
 }

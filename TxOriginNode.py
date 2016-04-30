@@ -3,12 +3,9 @@ from NodeClient import *
 class TxOriginNode:
     def __init__(self, cnds_info, txs):
         self.reactor = None
-        self.node_ip = None
-        self.node_port = None
-        self.node_pubkey = None
+        self.node_info = None
         
-        self.cnds_ip = cnds_info["CNDSip"]
-        self.cnds_port = cnds_info["CNDSport"]
+        self.cnds_info = cnds_info
         
         self.txs = txs
         
@@ -19,15 +16,13 @@ class TxOriginNode:
     
     def get_node_info(self):
         print("Retrieving node info from CNDS")
-        NodeClient.create_request(self.cnds_ip, self.cnds_port, 'GET', "node", { "get_node_info": True }, self.handle_node_info_resp)
+        NodeClient.create_request(None, self.cnds_info, 'GET', "node", { "get_node_info": True }, self.handle_node_info_resp)
         
     def handle_node_info_resp(self, resp_dict, fail):
         if not fail:
             # TODO: do some validation here
-            self.node_ip = resp_dict["node_ip"]
-            self.node_port = resp_dict["node_port"]
-            self.node_pubkey = resp_dict["node_pubkey"]
-            print("TxValidateNode to contact is at {0}:{1}".format(self.node_ip, self.node_port))
+            self.node_info = NodeInfo.from_dict(resp_dict)
+            print("TxValidateNode to contact is {0}".format(self.node_info))
             
             # Send transaction if this succeeds
             if self.txs:
@@ -39,7 +34,7 @@ class TxOriginNode:
         
     def send_new_tx(self, tx):
         print("Sending transaction: " + str(tx))
-        NodeClient.create_request(self.node_ip, self.node_port, 'POST', "new_tx", tx, self.handle_new_tx_resp)
+        NodeClient.create_request(None, self.node_info, 'POST', "new_tx", tx, self.handle_new_tx_resp)
         
     def handle_new_tx_resp(self, resp_dict, fail):
         if not fail:
@@ -58,12 +53,7 @@ import sys
 
 def main(args):
     cnds_info_path = None
-    cnds_info = {
-        "CNDSdomname": "leader1",
-        "CNDSip": "localhost",
-        "CNDSport": 1234,
-        "CNDSpubkey": None
-    }
+    cnds_info = NodeInfo(None, "localhost", 1234)
     
     # Parse command line arguments
     for arg in args[1:]:
@@ -71,7 +61,7 @@ def main(args):
     
     # Load CNDS configuration
     if cnds_info_path:
-        cnds_info = load_cnds_config(cnds_info_path)
+        cnds_info = load_node_config(cnds_info_path)
     
     # Run server
     print("Starting Node")

@@ -1,18 +1,19 @@
 from twisted.web import server, resource
 from twisted.internet import reactor, endpoints
 from twisted.internet.endpoints import TCP4ServerEndpoint
+
 from TxNodeUtil import *
+from NodeInfo import *
 
 class NodeServer(resource.Resource):
     isLeaf = True
     
-    def __init__(self, local_ip, local_port):
+    def __init__(self, local_info):
         resource.Resource.__init__(self)
         self.reactor = reactor
-        self.local_ip = local_ip
-        self.local_port = local_port
+        self.local_info = local_info
         backlog = 10
-        endpoint = TCP4ServerEndpoint(reactor, self.local_port, backlog, self.local_ip)
+        endpoint = TCP4ServerEndpoint(reactor, self.local_info.port, backlog, self.local_info.ip)
         endpoint.listen(server.Site(self))
         
     def render_response(self, request, handler):
@@ -33,15 +34,22 @@ class NodeServer(resource.Resource):
         #print("Request String: " + str(request_str))
         
         try:
-            payload_dict = deserialize_payload(request_str, request_cipher)
+            recv_dict = deserialize_payload(request_str, request_cipher)
+            payload_dict = recv_dict["payload"]
+            client_info = None
+            
+            if "sender" in recv_dict and recv_dict["sender"]:
+                client_info = NodeInfo.from_dict(recv_dict["sender"])
+            
         except:
             print("Failed to deserialize request:")
             print("\tFunction: " + str(fcn))
             print("\tRequest String: " + str(request_str))
+            raise
         
         # The call to the handler should stay outside to allow crash if handler has error
         if payload_dict:
-            resp_dict = handler(fcn, payload_dict, client_ip)
+            resp_dict = handler(fcn, payload_dict, client_info)
             
             try:
                 resp_str = serialize_payload(resp_dict, response_cipher)
@@ -50,6 +58,7 @@ class NodeServer(resource.Resource):
                 print("\tFunction: " + str(fcn))
                 print("\tRequest Payload: " + str(payload_dict))
                 print("\tResponse Payload: " + str(resp_dict))
+                raise
             
         if resp_str:
             return resp_str

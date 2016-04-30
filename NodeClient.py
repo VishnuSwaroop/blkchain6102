@@ -7,14 +7,15 @@ from twisted.web.iweb import IBodyProducer
 from zope.interface import implements
 
 from TxNodeUtil import *
+from NodeInfo import *
 
 class NodeClient:
     # TODO: create connection pool to persist client connections
     
     @staticmethod
-    def create_request(ip, port, method, fcn, req_dict, resp_handler, req_cipher=None, resp_cipher=None, timeout=2.0):
+    def create_request(sender_info, recipient_info, method, fcn, req_dict, resp_handler, req_cipher=None, resp_cipher=None, timeout=2.0):
         client = NodeClient(timeout)
-        client.send_request(ip, port, method, fcn, req_dict, resp_handler, req_cipher, resp_cipher)
+        client.send_request(sender_info, recipient_info, method, fcn, req_dict, resp_handler, req_cipher, resp_cipher)
         
     @staticmethod
     def run():
@@ -25,7 +26,7 @@ class NodeClient:
         self.agent = Agent(self.reactor, connectTimeout=connectTimeout)
         # print("Agent connect timeout: {0}".format(connectTimeout))
         
-    def send_request(self, ip, port, method, fcn, request_dict, response_handler, request_cipher, response_cipher):
+    def send_request(self, sender_info, recipient_info, method, fcn, request_dict, response_handler, request_cipher, response_cipher):
         class StringProducer(object):
             implements(IBodyProducer)
             
@@ -35,16 +36,20 @@ class NodeClient:
         
             def startProducing(self, consumer):
                 consumer.write(self.body)
-                return succeed(None)  
+                return succeed(None)
         
-        request_str = serialize_payload(request_dict, request_cipher)
+        sender_info_dict = None
+        if sender_info:
+            sender_info_dict = sender_info.get_dict()
+        payload_dict = { "sender": sender_info_dict, "payload": request_dict }
+        request_str = serialize_payload(payload_dict, request_cipher)
         # print("Sending request: " + str(request_str))
         
         body = StringProducer(request_str)
         res = self.agent.request(
             method,
-            "http://" + str(ip) + ":" + str(port) + "/" + fcn,
-            Headers({'User-Agent': ['TxOriginNode'], 'Content-Type': ['application/octet-stream']}),
+            "http://{0}/{1}".format(recipient_info.get_uri(), fcn),
+            Headers({'User-Agent': ['TxNodeClient'], 'Content-Type': ['application/octet-stream']}),
             body)
         
         #print("Sending request and waiting for response")
