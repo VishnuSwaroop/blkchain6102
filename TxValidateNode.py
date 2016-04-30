@@ -122,7 +122,9 @@ class TxValidateNode(NodeServer):
             
         return { "status": "ok" }
     
-    def handle_add_block(self, block, client_info):
+    def handle_add_block(self, block_dict, client_info):
+        block_hash = block_dict["block_hash"]
+        block = block_dict["block"]
         # TODO: validate block
         # TODO: validate transactions
         
@@ -141,7 +143,7 @@ class TxValidateNode(NodeServer):
         else:
             pass
             # TODO: query sender's chain for previous hash of the block recently received
-            # remote_chain = self.request_blockchain(
+            self.request_blocks(client_info, 5, block_dict["block_hash"])
             # TODO: check for longer chain and replace local chain if sender's is longer
         
         return { "status": "ok" }
@@ -189,16 +191,39 @@ class TxValidateNode(NodeServer):
         # TODO: remove nodes that do not respond from the list after some number of failed attempts
         pass
     
+    @staticmethod
+    def read_latest_hash():
+        latest_hash = None
+        with open("newest_blkhash.json",'r') as data_file:
+            latest_hash = json.load(data_file)
+        return latest_hash
+    
+    @staticmethod
+    def read_blockchain():
+        local_chain = None
+        with open("blockchain_database.json",'r') as data_file:
+            local_chain = json.load(data_file)
+        return local_chain
+    
+    @staticmethod
+    def write_blockchain(chain):
+        with open("blockchain_database.json",'w') as data_file:
+            json.dump(data_file, chain)
+    
     def handle_get_blockchain(self, payload_dict):
         start_hash = payload_dict["start_hash"]
         num_blocks = payload_dict["num_blocks"]
         
+        # Read latest hash from disk if not specified
         if not start_hash:
-            # TODO: read latest hash from disk
-            start_hash = None
+            start_hash = TxValidateNode.read_latest_hash()
         
-        # TODO: load in blockchain
-        local_chain = None
+        # Load in blockchain
+        local_chain = TxValidateNode.read_blockchain()
+        
+        # Read entire blockchain if num_blocks not specified or <= 0
+        if not num_blocks or num_blocks <= 0:
+            num_blocks = len(local_chain)
         
         chain_segment = { }
         
@@ -211,16 +236,71 @@ class TxValidateNode(NodeServer):
                     cur_hash = chain_segment[cur_hash].previoushash
                 else:
                     break
+        
+        chain_segment["start_hash"] = start_hash
+                
         return chain_segment
         
     def request_blocks(self, node_info, num_blocks, start_hash):
         print("Requesting blocks from {0}".format(node_info))
         req_dict = { "num_blocks": num_blocks, "start_hash": start_hash }
         NodeClient.create_request(self.local_info, node_info, "GET", "blocks", req_dict, resp_handler)
+    
+    @staticmethod    
+    def find_chain_intersection(local_chain, recv_chain, start_hash):
+        recv_chain_sublen = 0
+        found = False
+        cur_hash = start_hash
+        while not found and cur_hash:
+            if cur_hash in local_chain:
+                return cur_hash, recv_chain_sublen
+            else:
+                cur_hash = recv_chain[cur_hash].previoushash
+                recv_chain_sublen += 1
+        return None
+    
+    @staticmethod
+    def count_chain_sublen(chain, start_hash, end_hash):
+        chain_sublen = 0
+        cur_hash = start_hash
+        while cur_hash != end_hash and cur_hash:
+            cur_hash = chain[cur_hash].previoushash
+            chain_sublen += 1
+        return chain_sublen
+    
+    @staticmethod
+    def merge_chains(base, base_start, new_segment, intersection_hash):
+        cur_hash = base_start
+        while cur_hash != intersection_hash and cur_hash:
+            prev_hash = base[cur_hash].previoushash
+            del base[cur_hash]
+            cur_hash = prev_hash
+            
+        base.update(new_segment)
         
     def handle_blocks_response(self, payload_dict, sender_info):
         print("Blocks received from {0}".format(sender_info))
-        pass
+        local_start_hash = TxValidateNode.read_latest_hash()
+        recv_chain = payload_dict
+        local_chain = TxValidateNode.read_blockchain()
+        
+        # Find where received chain links into local chain
+        start_hash = recv_chain["start_hash"]
+        intersection_hash, recv_chain_sublen = TxValidateNode.find_chain_intersection(local_chain, recv_chain, start_hash)
+        
+        # If found
+        if intersection_hash:
+            # Determine size of local chain between head and deviation
+            local_chain_sublen = TxValidateNode.count_chain_sublen(local_chain, local_start_hash, intersection_hash)
+            
+            # Check if received chain is longer than local chain and replace if necessary
+            if local_chain_sublen < recv_chain_sublen:
+                local_chain = TxValidateNode.merge_chains(local_chain, local_start_hash, recv_chain, intersection_hash)
+                TxValidateNode.write_blockchain(local_chain)
+                
+        else:
+            # Request the entire blockchain from the node and repeat this handler when it is received
+            self.request_blocks(sender_info, 0, None)
     
 def main(args):
     node_config_file = None

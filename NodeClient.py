@@ -1,7 +1,7 @@
 from twisted.internet import reactor, endpoints, protocol
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.defer import succeed
-from twisted.web.client import Agent
+from twisted.web.client import Agent, HTTPConnectionPool
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IBodyProducer
 from zope.interface import implements
@@ -10,8 +10,6 @@ from TxNodeUtil import *
 from NodeInfo import *
 
 class NodeClient:
-    # TODO: create connection pool to persist client connections
-    
     @staticmethod
     def create_request(sender_info, recipient_info, method, fcn, req_dict, resp_handler, req_cipher=None, resp_cipher=None, timeout=2.0):
         client = NodeClient(timeout)
@@ -22,8 +20,13 @@ class NodeClient:
         reactor.run()
     
     def __init__(self, connectTimeout):
+        
+        # Use global connection pool to persist TCP connections for this process
+        if not hasattr(NodeClient, "_connection_pool"):
+            NodeClient._connection_pool = HTTPConnectionPool(reactor)
+        
         self.reactor = reactor
-        self.agent = Agent(self.reactor, connectTimeout=connectTimeout)
+        self.agent = Agent(self.reactor, connectTimeout=connectTimeout, pool=NodeClient._connection_pool)
         # print("Agent connect timeout: {0}".format(connectTimeout))
         
     def send_request(self, sender_info, recipient_info, method, fcn, request_dict, response_handler, request_cipher, response_cipher):
