@@ -1,4 +1,5 @@
 from NodeClient import *
+from tx_format import *
     
 class TxOriginNode:
     def __init__(self, cnds_info, txs):
@@ -34,7 +35,7 @@ class TxOriginNode:
         
     def send_new_tx(self, tx):
         print("Sending transaction: " + str(tx))
-        NodeClient.create_request(None, self.node_info, 'POST', "new_tx", tx, self.handle_new_tx_resp)
+        NodeClient.create_request(None, self.node_info, 'POST', "new_tx", tx.to_dict(), self.handle_new_tx_resp)
         
     def handle_new_tx_resp(self, resp_dict, fail):
         if not fail:
@@ -66,9 +67,16 @@ def main(args):
     # Run server
     print("Starting Node")
     # try:
-    txs = []
-    for i in xrange(1, 5*2):
-        txs.append({"tx{0}".format(i): "txinfo"})
+    tx1 = tx_object("localhost", "me", 1, None, None, previous_hash=None)
+    tx2 = tx_object("localhost", "me", 2, None, None, previous_hash=tx1.current_hash)
+    tx3 = tx_object("localhost", "me", 3, None, None, previous_hash=tx2.current_hash)
+    tx4 = tx_object("localhost", "me", 4, None, None, previous_hash=tx3.current_hash)
+    tx5 = tx_object("localhost", "me", 5, None, None, previous_hash=tx4.current_hash)
+    tx6 = tx_object("localhost", "me", 6, None, None, previous_hash=tx5.current_hash)
+    tx7 = tx_object("localhost", "me", 7, None, None, previous_hash=tx6.current_hash)
+    tx8 = tx_object("localhost", "me", 8, None, None, previous_hash=tx7.current_hash)
+    tx9 = tx_object("localhost", "me", 9, None, None, previous_hash=tx8.current_hash)
+    txs = [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8, tx9]
     node = TxOriginNode(cnds_info, txs)
     node.start()
     # except Exception as exc:

@@ -1,5 +1,6 @@
 import json
 import bson
+from collections import OrderedDict
 from uuid import uuid4
 from Crypto import Random
 from Crypto.Cipher import PKCS1_OAEP
@@ -34,18 +35,18 @@ def decrypt_payload(encrypted_payload_str, cipher):
     #    blocks.append(cipher.decrypt(encrypted_payload_str[i:end_stride]))
     #return "".join(blocks)
     
-def serialize_payload(payload_dict, cipher, encode=json.dumps):
+def serialize_payload(payload_dict, cipher):
     # Serialize message dictionary to JSON payload
-    # payload = json.dumps(payload_dict)
+    payload = json.dumps(payload_dict)
     # payload = bson.BSON.encode(payload_dict)
-    payload = encode(payload_dict)
+    # payload = encode(payload_dict)
     
     # Encrypt JSON payload
     if cipher:
         payload = NodeMessage.encrypt_payload(payload, cipher)
         
     # Compute hash of encrypted payload
-    datahash = SHA512.new(bytes(str(payload))).digest()
+    datahash = SHA512.new(bytes(str(payload))).hexdigest()
     
     # Create binary message string
     msg_str = "".join([payload, datahash])  # TODO: should really use something like bson for this...
@@ -55,19 +56,19 @@ def serialize_payload(payload_dict, cipher, encode=json.dumps):
 def decode_bson(payload_str):
     return bson.BSON(payload_str).decode()
     
-def deserialize_payload(msg_str, cipher, decode=json.loads):
+def deserialize_payload(msg_str, cipher):
     # Interpret HTTP binary message string
-    end = len(msg_str) - 64       # TODO: should really use something like bson for this...
+    end = len(msg_str) - 128       # TODO: should really use something like bson for this...
     datahash = msg_str[end:]
     payload = msg_str[:end]
     
-    # print("msg_str={0}\ndatahash={1}\npayload={2}".format(msg_str, datahash, payload))
+    print("msg_str={0}\ndatahash={1}\npayload={2}".format(msg_str, datahash, payload))
     
     # Compute hash of encrypted data
     computed_hash = SHA512.new(bytes(str(payload)))
     
     # Verify hash
-    if computed_hash.digest() != datahash:
+    if computed_hash.hexdigest() != datahash:
         print("Payload deserialization failed due to invalid hash")
         return None
         
@@ -76,9 +77,9 @@ def deserialize_payload(msg_str, cipher, decode=json.loads):
         payload = NodeMessage.decrypt_payload(payload, cipher)
     
     # Get payload dictionary
-    # payload_dict = json.loads(payload)
+    payload_dict = json.loads(payload, object_pairs_hook=OrderedDict)
     # payload_dict = bson.BSON.decode(payload)
-    payload_dict = decode(payload)
+    # payload_dict = decode(payload)
 
     # If json.load returns None, an empty dictionary was sent
     if not payload_dict:

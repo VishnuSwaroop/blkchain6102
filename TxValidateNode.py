@@ -1,7 +1,11 @@
 import sys
+import json
 from NodeServer import *
 from NodeClient import *
 from ProofOfWork import *
+from tx_format import *
+from blk_format import *
+from hashcash import *
 
 class TxValidateNode(NodeServer):    
     def __init__(self, cnds_info, node_config):
@@ -50,6 +54,7 @@ class TxValidateNode(NodeServer):
             
             if self.network_info:
                 print("Network info retrieved: " + str(self.network_info))
+                TxValidateNode.store_network_info(self.network_info)
                 self.start_server()
             else:
                 raise Exception("Failed to get network info. Invalid response from CNDS")
@@ -62,12 +67,27 @@ class TxValidateNode(NodeServer):
         for name, node_dict in resp.iteritems():
             network_info[name] = NodeInfo.from_dict(node_dict)
         return network_info
+    
+    @staticmethod
+    def get_network_info_dict(network_info):
+        network_info_dict = { }
+        for name, node in network_info.iteritems():
+            network_info_dict[name] = node.get_dict()
+        return network_info_dict
+    
+    @staticmethod
+    def store_network_info(network_info): #store response to nodeinfo request
+        with open('network.json', 'w') as outfile:
+            json.dump(TxValidateNode.get_network_info_dict(network_info), outfile, indent=4, sort_keys=True)
         
     def check_and_add_node_info(self, client_info):
-        # TODO: was there something to do here?
-        if not client_info.name in self.network_info:
+        if client_info.name not in self.network_info:
             print("Discovered new node at {0}".format(client_info))
+            with open('network.json','r') as data_file:    
+                self.network_info = json.load(data_file)
             self.network_info[client_info.name] = client_info
+            with open('network.json', 'w') as outfile:
+                json.dump(self.network_info, outfile, indent=4, sort_keys=True)#store the information about the new node
     
     def handle_get(self, fcn, payload_dict, client_info):
         print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, payload_dict))
@@ -98,59 +118,196 @@ class TxValidateNode(NodeServer):
         self.broadcast_message("POST", "add_tx", tx)
         return resp_dict
     
-    def handle_add_tx(self, tx):
+    def handle_add_tx(self, transaction):
         print("Adding transaction")
         
-        # TODO: validate transaction
+        new_tx=tx_object(transaction['origin'], transaction['owner'],transaction['value'], transaction['owner_pubkey'],transaction['upper_limit'], transaction['previous_hash'], transaction['current_hash'])
+        new_tx.to_string()
         
-        # Add to unconfirmed pool (uc)
-        self.uc_pool.append(tx)
-        print("UC Pool Size: {0}".format(len(self.uc_pool)))
+        with open('tx_database.json','r') as data_file:    
+            uc_pool = json.load(data_file)
+        #dict_state[transaction['current_hash']]= {'previous_hash':transaction['previous_hash'],'current_dict':new_tx.to_dict()}
         
-        # dict_state = self.check_overflow()
-        # if dict_state:
-        #     self.generate_block(dict_state)
-        # If uc overflows, begin working on proof of work
-        max_size = 4
-        if len(self.uc_pool) >= max_size:
-            block = self.uc_pool[:max_size]     # only take up to the max size for the current block
-            self.uc_pool = self.uc_pool[max_size:]
-            try:
-                self.start_proof_of_work(block)
-            except:
-                self.return_aborted_transactions(block)
+        uc_pool[transaction['current_hash']]= new_tx.to_dict()  #Here the previous hash inside new_tx could be None or some dict, if None, it is a new origin node that is sending a tx
+        
+        with open('tx_database.json', 'w') as outfile:
+            json.dump(uc_pool, outfile, indent=4, sort_keys=True) #adding to unconfirmed pool
+            
+        overflow_tx = self.check_overflow()
+
+        if overflow_tx and not self.proof_of_work:
+            with open('tx_database.json','w') as outfile:    
+                json.dump({}, outfile, indent=4, sort_keys=True) #clearing unconfirmed pool 
+            self.start_proof_of_work(overflow_tx)
             
         return { "status": "ok" }
+        
+    def check_overflow(self): #returns True if overflow, otherwise returns false
+        with open('tx_database.json','r') as data_file:    
+            dict_state = json.load(data_file)
+        
+       
+        if len(dict_state.keys()) >= 8:
+            print '########## Transaction buffer full ###########'    
+            return dict_state
+        else:
+            return False
     
-    def handle_add_block(self, block_dict, client_info):
-        block_hash = block_dict["block_hash"]
-        block = block_dict["block"]
-        # TODO: validate block
-        # TODO: validate transactions
+    def set_merkle(self,tx_order_dict):
+        #tx_order_dict= OrderedDict(tx_dict)
+        hashes1=[]
+        hashes2=[]
+        hashes3=[]
         
-        # TODO: Read blockchain from disk
-        local_chain = None
-        # TODO: Determine chain length
-        local_chain_len = 0
-        # TODO: Read most recent hash of local chain
-        latest_hash = None
+        i=0
+        while (i< len(tx_order_dict.keys())):#every key is a hash of the tx, range=8
+            temp=tx_order_dict.keys()[i]+tx_order_dict.keys()[i+1]
+            i=i+2
+            hashes1.append(SHA512.new(bytes(temp)).hexdigest()) #has 4 hashes
+        i=0
+        while (i< len(hashes1)):#every key is a hash of the tx, range=4
+            temp=hashes1[i]+hashes1[i+1]
+            i=i+2
+            hashes2.append(SHA512.new(bytes(temp)).hexdigest()) #has 2 hashes
+        i=0
+        while (i< len(hashes2)):#every key is a hash of the tx, range=2
+            temp=hashes2[i]+hashes2[i+1]
+            i=i+2
+            root_hash=SHA512.new(bytes(temp)).hexdigest() #has the root hash
+            print ('Merkle root calculated :')
+            print root_hash
+            
+        return root_hash
+    
+    def validate_block(self, block_broadcast): # Done on receiving a block from another node (not on getting every new tx). This might take long. 
         
-        if block.previoushash == latest_hash:
+        difficulty = 12
+        block_dict = block_broadcast['block_dict']
+        previoushash = block_dict['block_header']['previoushash']
+        header_data = block_dict['magicnum'] +block_dict['block_header']['version']+ block_dict['block_header']['merklehash']+block_dict['block_header']['time']+block_dict['txcount']+str( block_dict['block_header']['nonce'])
+        
+        if not ProofOfWork.verify(previoushash, header_data, block_dict['block_header']['nonce'], difficulty):
+            return False
+    
+        tx_order_dict=block_broadcast['block_dict']['transactions']
+        flag=False
+        root_verify= self.set_merkle(tx_order_dict)
+        if root_verify==str(block_broadcast['block_dict']['block_header']['merklehash']):
+            print('========================= Merkle root for block %s is Valid !==============================' % (block_broadcast['block_hash']))
+            flag=True
+        else:
+            print('========================= Merkle root for block %s is NOT Valid !==============================' % (block_broadcast['block_hash']))
+            return False
+            
+        
+        
+        if(flag==True):
+            with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
+                    newest_hash_dict=json.load(data_file)
+            newest_blkhash=newest_hash_dict['newest_hash']
+            #check hash of latest block
+            if block_broadcast['block_dict']['block_header']['previoushash']==newest_blkhash:
+                tx_verify=''
+                for tx in tx_order_dict.keys():
+                    blockhash=newest_blkhash
+                    while blockhash != None:
+                        #value = d.get(key, "empty")
+                        tx_verify=blockchain_dict[blockhash]['transactions'].get(tx['previous_hash'])
+                        if tx_verify not in ('', None):
+                            print ('------------------ Transaction Verified !! ----------------------')
+                            break
+                        else:
+                            blockhash=blockchain_dict[blockhash]['block_header']['previoushash']
+                
+                    
+                    
+                    if tx_verify in ('',None):
+                        print ('------------------ A transaction is not verified !! ----------------------')
+                        return False
+                
+                
+                #If all transactions valid, store block . Reuse above code to add to file
+        
+                with open('blockchain_database.json','r') as data_file:    
+                    blockchain_state = json.load(data_file) #returns the entire blockchain
+                
+                
+                blockchain_state[block_broadcast['block_hash']]=block_broadcast['block_dict']
+                
+                with open('blockchain_database.json','w') as outputfile:    
+                    json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
+                
+                with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
+                    json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
+            
+                
+                
+            else:
+                print('Previous block not in blockchain !! ')
+                
+    def merge_unconfirmedpool(self,pool1,pool2,pool3):
+        with open('tx_database.json','r') as data_file:    
+            pool_state = json.load(data_file)
+        
+        
+        pool1_keys=pool1.keys()
+        pool2_keys=pool2.keys()
+        pool3_keys=pool3.keys()
+        
+        common=((pool1_keys | pool2_keys) & pool3_keys)
+        common=list(common)
+        final=pool1.copy()
+        final.update(pool2) #does the union
+        # del c['b']
+        for i in common:
+            del final[i] #delete the common elements
+            
+        return final
+    
+    def handle_add_block(self, block_dict, client_info): 
+        if self.validate_block(block_dict):
             # Abort current proof of work
             old_uc_pool = self.abort_proof_of_work()
-            # TODO: add to blockchain
-            # TODO: write blockchain back to disk    
+            
+            # Read current blockchain
+            with open('tx_database.json','r') as data_file:
+                pool_state = json.load(data_file)
+            
+            # Merge unconfirmed pools
+            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool.to_dict()["transactions"], pool_state, block_dict["block_dict"]["transactions"])
+            
+            # Write current blockchain
+            with open('tx_database.json','w') as data_file:
+                json.dump(data_file, final_uc_pool)
         else:
-            pass
-            # TODO: query sender's chain for previous hash of the block recently received
+            # Query sender's chain to determine if it's longer
             self.request_blocks(client_info, 5, block_dict["block_hash"])
-            # TODO: check for longer chain and replace local chain if sender's is longer
         
         return { "status": "ok" }
+        
+    def generate_block(self,dict_state): #dict_state is a dict of transactions
+        print '########## Generating Block ###########'   
+        
+        with open('block_config.json','r') as data_file:    
+            block_config = json.load(data_file)
+        # with open('tx_database.json','r') as data_file:    
+        #     dict_state = json.load(data_file)
+        with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
+            newest_hash_dict=json.load(data_file)
+            
+        if newest_hash_dict != {}:
+            prev_hash=newest_hash_dict['newest_hash']
+        else:
+            prev_hash = None
+        
+        block=block_object(block_config,dict_state,prev_hash)
+        block.toString()
+        return block #returns block with all info except nonce
     
-    def start_proof_of_work(self, block):
+    def start_proof_of_work(self, overflow_tx):
         print("Scheduling proof of work")
         if not self.proof_of_work:
+            block = self.generate_block(overflow_tx)
             self.proof_of_work = ProofOfWork(self.reactor, block, self.proof_of_work_completed, self.proof_of_work_failed)
         else:
             raise Exception("Attempted to start proof of work while another is already running")
@@ -163,15 +320,33 @@ class TxValidateNode(NodeServer):
             return aborted_transactions
     
     def proof_of_work_completed(self, block, nonce):
-        # TODO: update nonce
-        self.broadcast_message("POST", "block", block)
-        # TODO: add block to local blockchain
+        block_dict = block.to_dict()
+        block_dict['block_header']['nonce']=nonce
+        
+        with open('blockchain_database.json','r') as data_file:    
+            blockchain_state = json.load(data_file) #returns the entire blockchain        
+        
+        #should we include previous hash here ? Will that work with the nonce while verification ? because its only used for comparison in the generation of nonce
+        header_data=block_dict['magicnum'] +block_dict['block_header']['version']+ block_dict['block_header']['merklehash']+block_dict['block_header']['time']+block_dict['txcount']+str( block_dict['block_header']['nonce'])
+        block_hash=SHA512.new(bytes(header_data)).hexdigest()
+        
+        blockchain_state[block_hash]=block_dict
+        
+        with open('blockchain_database.json','w') as outputfile:    
+            json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
+        
+        with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
+            json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
+            
+        
+        #send block to broadcast
+        block_broadcast={'block_hash':block_hash,'block_dict':block_dict}
+        
+        self.broadcast_message("POST", "block", block_broadcast)
         self.proof_of_work = None
         
     def proof_of_work_failed(self, failure, old_uc_pool):
-        print("Proof of work failed: {0}".format(str(failure)))
-        self.return_aborted_transactions(old_uc_pool)
-        self.proof_of_work = None
+        raise Exception("Hashcash thread threw an exception: {0}".format(str(failure)))
         
     def return_aborted_transactions(self, old_uc_pool):
         print("Txs from aborted block returned to UC pool")
@@ -183,7 +358,7 @@ class TxValidateNode(NodeServer):
             for node_name, node_info in self.network_info.iteritems():
                 if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
                     print("Broadcasting to {0}".format(node_info))
-                    NodeClient.create_request(self.local_info, node_info, method, fcn, msg_dict, None)
+                    NodeClient.create_request(self.local_info, node_info, method, fcn, msg_dict, self.handle_broadcast_resp)
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
     

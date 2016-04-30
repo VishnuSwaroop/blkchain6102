@@ -56,6 +56,7 @@ class NodeClient:
             body)
         
         #print("Sending request and waiting for response")
+        # print("Response handler: " + str(response_handler))
         res.addCallback(self.get_resp, response_cipher, response_handler)
         res.addErrback(self.get_fail, response_handler)
         
@@ -79,6 +80,6 @@ class NodeClient:
             
     def get_fail(self, fail, response_handler):
             # Parse failure
-            #print("Failure: " + str(fail))
+            print("Failure: " + str(fail))
             response_handler(None, fail)
             
