@@ -6,6 +6,7 @@ from ProofOfWork import *
 from tx_format import *
 from blk_format import *
 from hashcash import *
+from globalhash import *
 
 class TxValidateNode(NodeServer):    
     def __init__(self, cnds_info, node_config):
@@ -124,14 +125,23 @@ class TxValidateNode(NodeServer):
         new_tx=tx_object(transaction['origin'], transaction['owner'],transaction['value'], transaction['owner_pubkey'],transaction['upper_limit'], transaction['previous_hash'], transaction['current_hash'])
         new_tx.to_string()
         
-        with open('tx_database.json','r') as data_file:    
-            uc_pool = json.load(data_file)
-        #dict_state[transaction['current_hash']]= {'previous_hash':transaction['previous_hash'],'current_dict':new_tx.to_dict()}
         
-        uc_pool[transaction['current_hash']]= new_tx.to_dict()  #Here the previous hash inside new_tx could be None or some dict, if None, it is a new origin node that is sending a tx
+        #Global hash table check
+        if global_hash_table(tx):
+            
         
-        with open('tx_database.json', 'w') as outfile:
-            json.dump(uc_pool, outfile, indent=4, sort_keys=True) #adding to unconfirmed pool
+        
+        
+        
+        
+        # with open('tx_database.json','r') as data_file:    
+        #     uc_pool = json.load(data_file)
+        # #dict_state[transaction['current_hash']]= {'previous_hash':transaction['previous_hash'],'current_dict':new_tx.to_dict()}
+        # 
+        # uc_pool[transaction['current_hash']]= new_tx.to_dict()  #Here the previous hash inside new_tx could be None or some dict, if None, it is a new origin node that is sending a tx
+        # 
+        # with open('tx_database.json', 'w') as outfile:
+        #     json.dump(uc_pool, outfile, indent=4, sort_keys=True) #adding to unconfirmed pool
             
         overflow_tx = self.check_overflow()
 
@@ -184,7 +194,8 @@ class TxValidateNode(NodeServer):
         difficulty = 12
         block_dict = block_broadcast['block_dict']
         previoushash = block_dict['block_header']['previoushash']
-        header_data = str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+str( block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount'])+str( block_dict['block_header']['nonce'])
+        #send same data as last time, but also pass the nonce
+        header_data = str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+str( block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount']) #+str( block_dict['block_header']['nonce'])
         
         if not ProofOfWork.verify(previoushash, header_data, block_dict['block_header']['nonce'], difficulty):
             return False
@@ -204,9 +215,13 @@ class TxValidateNode(NodeServer):
         if(flag==True):
             with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
                     newest_hash_dict=json.load(data_file)
-            newest_blkhash=newest_hash_dict['newest_hash']
+            
+            if newest_hash_dict.get('newest_hash'):
+                newest_blkhash=newest_hash_dict['newest_hash']
+            else:
+                newest_blkhash=None
             #check hash of latest block
-            if block_broadcast['block_dict']['block_header']['previoushash']==newest_blkhash:
+            if block_broadcast['block_dict']['block_header']['previoushash'] in (newest_blkhash, None, '', 'None'):
                 tx_verify=''
                 for tx in tx_order_dict.keys():
                     blockhash=newest_blkhash
@@ -227,7 +242,7 @@ class TxValidateNode(NodeServer):
                 
                 
                 #If all transactions valid, store block . Reuse above code to add to file
-        
+                #TODO: Send confirmation back to the other validating node about this acceptance
                 with open('blockchain_database.json','r') as data_file:    
                     blockchain_state = json.load(data_file) #returns the entire blockchain
                 
@@ -243,7 +258,7 @@ class TxValidateNode(NodeServer):
                 
                 
             else:
-                print('Previous block not in blockchain !! ')
+                print('Previous block not in blockchain !! Sending query to other nodes for longest chain')
                 
     def merge_unconfirmedpool(self,pool1,pool2,pool3):
         with open('tx_database.json','r') as data_file:    
@@ -356,7 +371,7 @@ class TxValidateNode(NodeServer):
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
             for node_name, node_info in self.network_info.iteritems():
-                if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
+                if not (node_info['ip'] == self.local_info.ip and node_info['port'] == self.local_info.port):
                     print("Broadcasting to {0}".format(node_info))
                     NodeClient.create_request(self.local_info, node_info, method, fcn, msg_dict, self.handle_broadcast_resp)
         else:

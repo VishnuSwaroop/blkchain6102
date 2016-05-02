@@ -1,16 +1,2 @@
 {
-    "node1": {
-        "ip": "localhost", 
-        "name": "node1", 
-        "port": 1235, 
-        "pubkey": null, 
-        "pvtkey": null
-    }, 
-    "node2": {
-        "ip": "localhost", 
-        "name": "node2", 
-        "port": 1236, 
-        "pubkey": null, 
-        "pvtkey": null
-    }
-}
+    "3c1a3d9d-5d9c-4c65-ba32-fcedd87b8d2c": 

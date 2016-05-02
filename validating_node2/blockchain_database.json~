@@ -1,0 +1,89 @@
+{
+    "e8e9d904c2aecd11921938ae0e0a51d58fb95b2c25a99dd459923977f6455a278f279d147f748409ef91a9a18c3b157eb48eecc9bc29a01ac9630ac38e308700": {
+        "block_header": {
+            "bits": 12, 
+            "merklehash": "ce15bcfb9ec05256952d643f6f0dfd38be867313124d3a54b43870c88867e5388b13efb50c3e3e27ae17625f157bad762ac98b1b89bf4bed75715282787fbf3c", 
+            "nonce": 164, 
+            "previoushash": "e8e9d904c2aecd11921938ae0e0a51d58fb95b2c25a99dd459923977f6455a278f279d147f748409ef91a9a18c3b157eb48eecc9bc29a01ac9630ac38e308700", 
+            "time": null, 
+            "version": 5
+        }, 
+        "blocksize": null, 
+        "magicnum": 42, 
+        "transactions": {
+            "02000f0fc3e085e2ab1fb687ce5a86482ecd2f186730ea83073aa5fd7811a4984765ee3dde9033a1f476d951676ff5c922a047e4faee1649ce71dc32ab749ae0": {
+                "current_hash": "02000f0fc3e085e2ab1fb687ce5a86482ecd2f186730ea83073aa5fd7811a4984765ee3dde9033a1f476d951676ff5c922a047e4faee1649ce71dc32ab749ae0", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "3afce33d2e8df90ef6230124f414987c31eaaaeb1487e138d2d04a75db438cbf512c271fa7371a6fc98d8969d707c8ba9c74eb0c76532101227b99b3f1754d64", 
+                "upper_limit": "None", 
+                "value": "9"
+            }, 
+            "0d302eac47cd7164391468da4f5b0e9a58ba6fa572679708479b7ae4299f9ab849489c8cd391723c332f8f04763366b191d6203f2976babec1c22980156cea0b": {
+                "current_hash": "0d302eac47cd7164391468da4f5b0e9a58ba6fa572679708479b7ae4299f9ab849489c8cd391723c332f8f04763366b191d6203f2976babec1c22980156cea0b", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "8a88f67b4174cc2b292811f5c8d33a9fe543fdd9b168454f55633bc0c150e2fc8b463b55b6e2d0d73266a0cbedff2ac05e5d2d6a5f4c4c2485a994036b6b4815", 
+                "upper_limit": "None", 
+                "value": "7"
+            }, 
+            "3afce33d2e8df90ef6230124f414987c31eaaaeb1487e138d2d04a75db438cbf512c271fa7371a6fc98d8969d707c8ba9c74eb0c76532101227b99b3f1754d64": {
+                "current_hash": "3afce33d2e8df90ef6230124f414987c31eaaaeb1487e138d2d04a75db438cbf512c271fa7371a6fc98d8969d707c8ba9c74eb0c76532101227b99b3f1754d64", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "0d302eac47cd7164391468da4f5b0e9a58ba6fa572679708479b7ae4299f9ab849489c8cd391723c332f8f04763366b191d6203f2976babec1c22980156cea0b", 
+                "upper_limit": "None", 
+                "value": "8"
+            }, 
+            "85eaa82744c52e67776c2a8e2d2dd3fb5ac80dddc90a1ca00807bf6efc48fbc394b63ed99e905afe6be527a3a48a5f1f31997f65a197b4ff63faf5d8ed2aa4b1": {
+                "current_hash": "85eaa82744c52e67776c2a8e2d2dd3fb5ac80dddc90a1ca00807bf6efc48fbc394b63ed99e905afe6be527a3a48a5f1f31997f65a197b4ff63faf5d8ed2aa4b1", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "d8c47d078afec4aaabc54b78747cbd8c08d121f9e0eb94ea008357a7f8d6dfd4932de597ea01f4f820a733898b2fa6397de08d985b687a3b5e5505c3ec6315de", 
+                "upper_limit": "None", 
+                "value": "4"
+            }, 
+            "8a88f67b4174cc2b292811f5c8d33a9fe543fdd9b168454f55633bc0c150e2fc8b463b55b6e2d0d73266a0cbedff2ac05e5d2d6a5f4c4c2485a994036b6b4815": {
+                "current_hash": "8a88f67b4174cc2b292811f5c8d33a9fe543fdd9b168454f55633bc0c150e2fc8b463b55b6e2d0d73266a0cbedff2ac05e5d2d6a5f4c4c2485a994036b6b4815", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "e028a46257ba64f2e6a79c1861f144afb120e837f021cc4d5e4cd4dd3785a8acb6525237e50d9cc341b427d27906224df773b2d5541fae4f472a4b9fac53cefe", 
+                "upper_limit": "None", 
+                "value": "6"
+            }, 
+            "ae8c0366f213c8549135adc21dbf45c1345a931357aa9c6e88915d9c0661984cd25ae642e63258aa94cc20e72278cbe44db1fa81b173f972a02fbde9b718f810": {
+                "current_hash": "ae8c0366f213c8549135adc21dbf45c1345a931357aa9c6e88915d9c0661984cd25ae642e63258aa94cc20e72278cbe44db1fa81b173f972a02fbde9b718f810", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "797a30a8ffc6befb1c61a5b446a61f8e6f43969846c16b752fffef4f24c465302fab00137dad11e3f3aa250baf875d4040c1fdc304f0ef17d436eb403f7f5c7c", 
+                "upper_limit": "None", 
+                "value": "2"
+            }, 
+            "d8c47d078afec4aaabc54b78747cbd8c08d121f9e0eb94ea008357a7f8d6dfd4932de597ea01f4f820a733898b2fa6397de08d985b687a3b5e5505c3ec6315de": {
+                "current_hash": "d8c47d078afec4aaabc54b78747cbd8c08d121f9e0eb94ea008357a7f8d6dfd4932de597ea01f4f820a733898b2fa6397de08d985b687a3b5e5505c3ec6315de", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "ae8c0366f213c8549135adc21dbf45c1345a931357aa9c6e88915d9c0661984cd25ae642e63258aa94cc20e72278cbe44db1fa81b173f972a02fbde9b718f810", 
+                "upper_limit": "None", 
+                "value": "3"
+            }, 
+            "e028a46257ba64f2e6a79c1861f144afb120e837f021cc4d5e4cd4dd3785a8acb6525237e50d9cc341b427d27906224df773b2d5541fae4f472a4b9fac53cefe": {
+                "current_hash": "e028a46257ba64f2e6a79c1861f144afb120e837f021cc4d5e4cd4dd3785a8acb6525237e50d9cc341b427d27906224df773b2d5541fae4f472a4b9fac53cefe", 
+                "origin": "localhost", 
+                "owner": "me", 
+                "owner_pubkey": "None", 
+                "previous_hash": "85eaa82744c52e67776c2a8e2d2dd3fb5ac80dddc90a1ca00807bf6efc48fbc394b63ed99e905afe6be527a3a48a5f1f31997f65a197b4ff63faf5d8ed2aa4b1", 
+                "upper_limit": "None", 
+                "value": "5"
+            }
+        }, 
+        "txcount": 8
+    }
+}
