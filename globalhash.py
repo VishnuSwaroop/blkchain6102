@@ -1,11 +1,15 @@
 import json
 
+def load_global_hash():
+    tx_hashtable = None
+    with open('global_tx_hash.json','r') as datafile:
+        tx_hashtable=json.load(datafile)
+    return tx_hashtable
+
 def global_hash_table(tx): #tx is a dict
     #to check if the node's previous tx's hash is present in the database
     #if yes, check for previous tx hash and return True if present (and update hash table) else return False
-    with open('global_tx_hash.json','r') as datafile:
-        tx_hashtable=json.load(datafile)
-        
+    tx_hashtable = load_global_hash()
     
     if not tx_hashtable.get(tx['owner']):
         tx_hashtable[tx['owner']]=tx['current_hash']

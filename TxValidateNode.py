@@ -145,6 +145,8 @@ class TxValidateNode(NodeServer):
         elif fcn == "ping":
             print("Ping received from CNDS")
             resp_dict = { "status": "ok" }
+        elif fcn == "latest_tx":
+            resp_dict = self.handle_get_latest_tx(payload_dict)
             
         return resp_dict
         
@@ -162,12 +164,19 @@ class TxValidateNode(NodeServer):
             
         return resp_dict
     
+    def handle_get_latest_tx(self, payload_dict):
+        owner = payload_dict["owner"]
+        tx_hashtable = load_global_hash()
+        if owner in tx_hashtable:
+            return tx_hashtable[owner]
+        return None
+    
     def handle_new_tx(self, tx):
         print("Received new transaction")
         resp_dict = self.handle_add_tx(tx)
         # TODO: could refuse to broadcast transaction until after it is validated?
         self.broadcast_message("POST", "add_tx", tx)
-        return resp_dict
+        return resp_dict        
     
     def handle_add_tx(self, transaction):
         print("Adding transaction")

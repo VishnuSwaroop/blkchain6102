@@ -31,7 +31,7 @@ class NodeServer(resource.Resource):
         resp_str = None
         payload_dict = None
        
-        #print("Request String: " + str(request_str))
+        print("Request String: " + str(request_str))
         
         try:
             if request_str:
