@@ -275,13 +275,13 @@ class TxValidateNode(NodeServer):
         
         
         if(flag==True):
-            # with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
-            #         newest_hash_dict=json.load(data_file)
-            # 
-            # if newest_hash_dict.get('newest_hash'):
-            #     newest_blkhash=newest_hash_dict['newest_hash']
-            # else:
-            #     newest_blkhash=None
+            with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
+                    newest_hash_dict=json.load(data_file)
+            
+            if newest_hash_dict.get('newest_hash'):
+                newest_blkhash=newest_hash_dict['newest_hash']
+            else:
+                newest_blkhash=None
             # #check hash of latest block
             # if block_broadcast['block_dict']['block_header']['previoushash'] in (newest_blkhash, None, '', 'None'):
             #     tx_verify=''
@@ -312,10 +312,10 @@ class TxValidateNode(NodeServer):
             blockchain_state[block_broadcast['block_hash']]=block_broadcast['block_dict']
             
             with open('blockchain_database.json','w') as outputfile:    
-                json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
+                json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly verified block to block chain  
             
             with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
-                json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
+                json.dump({'newest_hash':block_broadcast['block_hash']},data_file,indent=4, sort_keys=True)
         
             
             
