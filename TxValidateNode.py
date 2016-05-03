@@ -22,7 +22,7 @@ class TxValidateNode(NodeServer):
         
         pubkey_filename = "node_public_key.pem"
         
-        real_cnds = False
+        real_cnds = True
         if real_cnds:
             self.connect_to_cnds(pubkey_filename)
         else:
