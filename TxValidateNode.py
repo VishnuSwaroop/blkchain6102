@@ -398,7 +398,7 @@ class TxValidateNode(NodeServer):
     
     @staticmethod
     def verify_num_resps(num_resps, network_info):
-        return num_resps / len(network_info) > 0.5
+        return num_resps / len(network_info) > 0.48
     
     def proof_of_work_completed(self, block, nonce):
         block_dict = block.to_dict()
@@ -450,7 +450,7 @@ class TxValidateNode(NodeServer):
             print(str(self.network_info))
             for node_name, node_info in self.network_info.iteritems():
                 print("{0}:{1}".format(node_name, node_info))
-                if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
+                if node_name != self.local_info.node_name:
                     print("Broadcasting to {0}".format(node_info))
                     try:
                         resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict, timeout=3)
