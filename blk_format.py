@@ -82,11 +82,11 @@ class block_object:
         self.blockHeader.toString()
         print
         print "##### Tx Count: %d" % self.txcount
-        i=0
-        for t in self.transactions:
-            print ('Transaction %d'% i)
-            i=i+1
-            print(str(self.transactions[t]))
+        # i=0
+        # for t in self.transactions:
+        #     print ('Transaction %d'% i)
+        #     i=i+1
+            # print(str(self.transactions[t]))
             
     def to_dict(self):
         #         self.magicnum = (blockconfig['magicnum'])

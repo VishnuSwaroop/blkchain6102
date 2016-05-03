@@ -55,7 +55,7 @@ def deserialize_payload(msg_dict, cipher):
     
     #print("msg_str={0}\ndatahash={1}\npayload={2}".format(msg_str, datahash, payload))
 
-    print("Message: {0}".format(msg_dict))
+    #print("Message: {0}".format(msg_dict))
     
     if "sender_name" in msg_dict:
         sender_name = msg_dict["sender_name"]
@@ -74,7 +74,7 @@ def deserialize_payload(msg_dict, cipher):
         
     sender_info = NodeInfo(sender_name, sender_ip, sender_port)
     
-    print("Sender Info: {0}".format(sender_info))
+    #print("Sender Info: {0}".format(sender_info))
     
     encrypted_payload = msg_dict["message"]
     msg_hash = msg_dict["message-hash"]

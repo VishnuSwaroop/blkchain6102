@@ -27,7 +27,8 @@ class TxValidateNode(NodeServer):
         if real_cnds:
             self.connect_to_cnds(pubkey_filename)
         else:
-            self.network_info = { "node1": NodeInfo("node1", "162.243.41.99", 8080), "node2": NodeInfo("node2", "128.61.124.49", 8080) }
+            # self.network_info = { "node1": NodeInfo("node1", "162.243.41.99", 8080), "node2": NodeInfo("node2", "128.61.124.49", 8080) }
+            self.network_info = { }
             TxValidateNode.store_network_info(self.network_info)
             print("Network info retrieved: " + str(self.network_info))
             self.start_server()
@@ -41,6 +42,7 @@ class TxValidateNode(NodeServer):
         print("Node listening for connections on {0}".format(self.local_info))
       
     def connect_to_cnds(self, pubkey_filename):
+        print("Connecting to CNDS")
         # Get node public key from file
         self.node_public_key = read_node_pubkey(pubkey_filename)
         
@@ -68,6 +70,7 @@ class TxValidateNode(NodeServer):
         TxValidateNode.store_network_info(self.network_info)
         
         print("Network info retrieved: " + str(self.network_info))
+        print("Connected to CNDS")
         
         # Start http server for validating node
         self.start_server()
@@ -146,7 +149,7 @@ class TxValidateNode(NodeServer):
             TxValidateNode.store_network_info(self.network_info)
     
     def handle_get(self, fcn, payload_dict, client_info):
-        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, payload_dict))
+        #print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, payload_dict))
         resp_dict = None
         if fcn == "blockchain":
             resp_dict = self.handle_get_blockchain(payload_dict)
@@ -159,7 +162,7 @@ class TxValidateNode(NodeServer):
         return resp_dict
         
     def handle_post(self, fcn, payload_dict, client_info):
-        print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, str(payload_dict)))
+        #print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, str(payload_dict)))
         resp_dict = None
         
         if fcn == "add_tx":
@@ -174,6 +177,7 @@ class TxValidateNode(NodeServer):
     
     def handle_get_latest_tx(self, payload_dict):
         owner = payload_dict["owner"]
+        print("Node requesting latest transaction for owner {0}".format(owner))
         tx_hashtable = load_global_hash()
         if owner in tx_hashtable:
             return { "previous_hash": tx_hashtable[owner] }
@@ -181,9 +185,8 @@ class TxValidateNode(NodeServer):
     
     def handle_new_tx(self, tx):
         print("Received new transaction")
-        resp_dict = self.handle_add_tx(tx)
-        # TODO: could refuse to broadcast transaction until after it is validated?
         self.broadcast_message("POST", "add_tx", tx)
+        resp_dict = self.handle_add_tx(tx)
         return resp_dict
     
     def handle_add_tx(self, transaction):
@@ -253,7 +256,7 @@ class TxValidateNode(NodeServer):
         return root_hash
     
     def validate_block(self, block_broadcast): # Done on receiving a block from another node (not on getting every new tx). This might take long. 
-        
+        print("Validating received block")
         difficulty = 12
         block_dict = block_broadcast['block_dict']
         previoushash = block_dict['block_header']['previoushash']
@@ -343,7 +346,9 @@ class TxValidateNode(NodeServer):
         return final
     
     def handle_add_block(self, block_dict, client_info):
+        print("Attempting to add block")
         if self.validate_block(block_dict):
+            print("Block validated")
             # Abort current proof of work
             old_block = self.abort_proof_of_work()
             
@@ -406,6 +411,8 @@ class TxValidateNode(NodeServer):
     @staticmethod
     def verify_num_resps(num_resps, network_info):
         num_nodes = len(network_info)
+        if num_nodes <= 0:
+            num_nodes = 1
         print("Num responses: {0}/{1}".format(num_resps, num_nodes))
         return num_resps / num_nodes >= 0.51
     
@@ -424,6 +431,8 @@ class TxValidateNode(NodeServer):
         
         # Check for responses from 51% of nodes
         if TxValidateNode.verify_num_resps(num_resps, self.network_info):
+            print(">51% of nodes validated block")
+            print("Adding block to blockchain")
             # Add block to local blockchain
             with open('blockchain_database.json','r') as data_file:    
                 blockchain_state = json.load(data_file) #returns the entire blockchain        
@@ -438,6 +447,8 @@ class TxValidateNode(NodeServer):
         else:
             # Return transactions back into unconfirmed pool
             # Read current blockchain
+            print("<51% of nodes validated block")
+            print("Block is not validated and transactions will be returned to unconfirmed transaction pool")
             with open('tx_database.json','r') as data_file:
                 pool_state = json.load(data_file)
             
@@ -456,11 +467,11 @@ class TxValidateNode(NodeServer):
     def broadcast_message(self, method, fcn, msg_dict):
         num_successes = 0
         if self.network_info:
-            print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
-            print(str(self.network_info))
+            #print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
+            #print(str(self.network_info))
             remove_nodes = []
             for node_name, node_info in self.network_info.iteritems():
-                print("{0}:{1}".format(node_name, node_info))
+                #print("{0}:{1}".format(node_name, node_info))
                 if node_name != self.local_info.name:
                     print("Broadcasting to {0}".format(node_info))
                     try:
@@ -479,6 +490,7 @@ class TxValidateNode(NodeServer):
             
             # Actually remove the nodes                
             for node_name in remove_nodes:
+                print("Removing unresponsive node {0}".format(node_name))
                 del self.network_info[node_name]
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
