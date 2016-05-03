@@ -31,7 +31,7 @@ class NodeServer(resource.Resource):
         resp_str = None
         payload_dict = None
        
-        print("Request String: " + str(request_str))
+        #print("Request String: " + str(request_str))
         
         try:
             if request_str:
@@ -48,17 +48,17 @@ class NodeServer(resource.Resource):
             raise
         
         # The call to the handler should stay outside to allow crash if handler has error
-        if payload_dict:
-            resp_dict = handler(fcn, payload_dict, client_info)
-            
-            try:
-                resp_str = serialize_payload(resp_dict, None, response_cipher)
-            except:
-                print("Failed to serialize response:")
-                print("\tFunction: " + str(fcn))
-                print("\tRequest Payload: " + str(payload_dict))
-                print("\tResponse Payload: " + str(resp_dict))
-                raise
+        #if payload_dict:
+        resp_dict = handler(fcn, payload_dict, client_info)
+        
+        try:
+            resp_str = serialize_payload(resp_dict, None, response_cipher)
+        except:
+            print("Failed to serialize response:")
+            print("\tFunction: " + str(fcn))
+            print("\tRequest Payload: " + str(payload_dict))
+            print("\tResponse Payload: " + str(resp_dict))
+            raise
             
         if resp_str:
             return resp_str
