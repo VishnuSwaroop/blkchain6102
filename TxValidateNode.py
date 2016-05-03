@@ -327,9 +327,9 @@ class TxValidateNode(NodeServer):
             pool_state = json.load(data_file)
         
         
-        pool1_keys=pool1.keys()
-        pool2_keys=pool2.keys()
-        pool3_keys=pool3.keys()
+        pool1_keys=set(pool1.keys())
+        pool2_keys=set(pool2.keys())
+        pool3_keys=set(pool3.keys())
         
         common=((pool1_keys | pool2_keys) & pool3_keys)
         common=list(common)
@@ -432,7 +432,7 @@ class TxValidateNode(NodeServer):
                 pool_state = json.load(data_file)
             
             # Merge unconfirmed pools
-            final_uc_pool = self.merge_unconfirmedpool(block_dict["block_dict"]["transactions"], pool_state, {})
+            final_uc_pool = self.merge_unconfirmedpool(block_dict["transactions"], pool_state, {})
             
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
