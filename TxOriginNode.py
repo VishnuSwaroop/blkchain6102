@@ -30,8 +30,8 @@ class TxOriginNode:
         else:
             raise Exception("Failed to get validating node info: " + str(status))
         """
-        self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
-        # self.node_info = NodeInfo("node1", "localhost", 8080)
+        # self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
+        self.node_info = NodeInfo("node1", "localhost", 8080)
         
         # Send transaction if this succeeds
         if self.txs:
@@ -75,7 +75,17 @@ def main(args):
     tx7 = tx_object("localhost", "me", 7, None, None, previous_hash=tx6.current_hash)
     tx8 = tx_object("localhost", "me", 8, None, None, previous_hash=tx7.current_hash)
     tx9 = tx_object("localhost", "me", 9, None, None, previous_hash=tx8.current_hash)
-    txs = [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8, tx9]
+    tx10 = tx_object("localhost", "you", 10, None, None, previous_hash=None)
+    tx11 = tx_object("localhost", "you", 11, None, None, previous_hash=tx10.current_hash)
+    tx12 = tx_object("localhost", "you", 12, None, None, previous_hash=tx11.current_hash)
+    tx13 = tx_object("localhost", "you", 13, None, None, previous_hash=tx12.current_hash)
+    tx14 = tx_object("localhost", "you", 14, None, None, previous_hash=tx13.current_hash)
+    tx15 = tx_object("localhost", "you", 15, None, None, previous_hash=tx14.current_hash)
+    tx16 = tx_object("localhost", "you", 16, None, None, previous_hash=tx15.current_hash)
+    tx17 = tx_object("localhost", "you", 17, None, None, previous_hash=tx16.current_hash)
+    tx18 = tx_object("localhost", "me", 18, None, None, previous_hash=tx9.current_hash)
+    tx19 = tx_object("localhost", "me", 19, None, None, previous_hash=tx18.current_hash)
+    txs = [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8, tx9, tx10, tx11, tx12, tx13, tx14, tx15, tx16, tx17, tx18, tx19]
     node = TxOriginNode(cnds_info, txs)
     # except Exception as exc:
     #   print("Fatal Error: " + str(exc))

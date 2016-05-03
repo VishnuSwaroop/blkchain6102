@@ -457,6 +457,7 @@ class TxValidateNode(NodeServer):
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
             print(str(self.network_info))
+            remove_nodes = []
             for node_name, node_info in self.network_info.iteritems():
                 print("{0}:{1}".format(node_name, node_info))
                 if node_name != self.local_info.name:
@@ -471,9 +472,13 @@ class TxValidateNode(NodeServer):
                             self.network_info[node_name].failed_broadcasts += 1
                             
                             if self.network_info[node_name].failed_broadcasts > 3:
-                                del self.network_info[node_name]
+                                remove_nodes.append(node_name)
                         else:
                             self.network_info[node_name].failed_broadcasts = 0
+            
+            # Actually remove the nodes                
+            for node_name in remove_nodes:
+                del self.network_info[node_name]
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
             
