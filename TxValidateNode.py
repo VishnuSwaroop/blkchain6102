@@ -440,7 +440,9 @@ class TxValidateNode(NodeServer):
         num_successes = 0
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
+            print(str(self.network_info))
             for node_name, node_info in self.network_info.iteritems():
+                print("{0}:{1}".format(node_name, node_info))
                 if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
                     print("Broadcasting to {0}".format(node_info))
                     try:
@@ -455,7 +457,7 @@ class TxValidateNode(NodeServer):
                             if self.network_info[node_name].failed_broadcasts > 3:
                                 del self.network_info[node_name]
                         else:
-                            self.network_info[node_name] = 0
+                            self.network_info[node_name].failed_broadcasts = 0
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
             
