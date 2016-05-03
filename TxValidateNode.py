@@ -404,6 +404,10 @@ class TxValidateNode(NodeServer):
         block_dict = block.to_dict()
         block_dict['block_header']['nonce']=nonce
         
+        #should we include previous hash here ? Will that work with the nonce while verification ? because its only used for comparison in the generation of nonce
+        header_data=str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+ str(block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount'])+str( block_dict['block_header']['nonce'])
+        block_hash=SHA512.new(bytes(header_data)).hexdigest()
+        
         #send block to broadcast
         block_broadcast={'block_hash':block_hash,'block_dict':block_dict}
         num_resps = self.broadcast_message("POST", "block", block_broadcast)
@@ -413,10 +417,6 @@ class TxValidateNode(NodeServer):
             # Add block to local blockchain
             with open('blockchain_database.json','r') as data_file:    
                 blockchain_state = json.load(data_file) #returns the entire blockchain        
-            
-            #should we include previous hash here ? Will that work with the nonce while verification ? because its only used for comparison in the generation of nonce
-            header_data=str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+ str(block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount'])+str( block_dict['block_header']['nonce'])
-            block_hash=SHA512.new(bytes(header_data)).hexdigest()
             
             blockchain_state[block_hash]=block_dict
             
@@ -432,7 +432,7 @@ class TxValidateNode(NodeServer):
                 pool_state = json.load(data_file)
             
             # Merge unconfirmed pools
-            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool.to_dict()["transactions"], pool_state, block_dict["block_dict"]["transactions"])
+            final_uc_pool = self.merge_unconfirmedpool(block_dict["block_dict"]["transactions"], pool_state, {})
             
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
@@ -450,7 +450,7 @@ class TxValidateNode(NodeServer):
             print(str(self.network_info))
             for node_name, node_info in self.network_info.iteritems():
                 print("{0}:{1}".format(node_name, node_info))
-                if node_name != self.local_info.node_name:
+                if node_name != self.local_info.name:
                     print("Broadcasting to {0}".format(node_info))
                     try:
                         resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict, timeout=3)
