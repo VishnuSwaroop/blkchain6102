@@ -37,6 +37,7 @@ class NodeServer(resource.Resource):
             if request_str:
                 print("Request String: {0}".format(request_str))
                 payload_dict, client_info = deserialize_payload(json.loads(request_str), request_cipher)
+                client_info.ip = client_ip
             else:
                 payload_dict = None
                 client_info = None
