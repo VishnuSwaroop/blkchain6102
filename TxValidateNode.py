@@ -22,11 +22,11 @@ class TxValidateNode(NodeServer):
         
         pubkey_filename = "node_public_key.pem"
         
-        real_cnds = True
+        real_cnds = False
         if real_cnds:
             self.connect_to_cnds(pubkey_filename)
         else:
-            self.network_info = { "node1": NodeInfo("node1", "localhost", 8080), "node2": NodeInfo("node2", "localhost", 8081) }
+            self.network_info = { "node1": NodeInfo("node1", "162.243.41.99", 8080), "node2": NodeInfo("node2", "128.61.124.49", 8080) }
             TxValidateNode.store_network_info(self.network_info)
             print("Network info retrieved: " + str(self.network_info))
             self.start_server()
@@ -577,7 +577,7 @@ def main(args):
     cnds_info_file = None
     
     cnds_info = NodeInfo("leader1", "", 8081)
-    node_config = NodeInfo("node2", "", 8080)
+    node_config = NodeInfo("node1", "", 8080)
         
     # Parse command line arguments
     for arg in args[1:]:
