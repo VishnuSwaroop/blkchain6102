@@ -17,7 +17,6 @@ class TxOriginNode:
     def get_node_info(self):
         print("Retrieving node info from CNDS")
         
-        """
         resp_dict = get_validating_node()
         status = resp_dict["status"]
         
@@ -29,9 +28,9 @@ class TxOriginNode:
             print("TxValidateNode to contact is {0}".format(self.node_info))
         else:
             raise Exception("Failed to get validating node info: " + str(status))
-        """
+        
         # self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
-        self.node_info = NodeInfo("node1", "localhost", 8080)
+        # self.node_info = NodeInfo("node1", "localhost", 8080)
         
         # Send transaction if this succeeds
         if self.txs:

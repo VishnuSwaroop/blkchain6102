@@ -1,5 +1,6 @@
 import sys
 import json
+from uuid import uuid1
 from NodeServer import *
 from NodeClient import *
 from ProofOfWork import *
@@ -406,7 +407,7 @@ class TxValidateNode(NodeServer):
     def verify_num_resps(num_resps, network_info):
         num_nodes = len(network_info)
         print("Num responses: {0}/{1}".format(num_resps, num_nodes))
-        return num_resps / num_nodes > 0.48
+        return num_resps / num_nodes >= 0.51
     
     def proof_of_work_completed(self, block, nonce):
         block_dict = block.to_dict()
@@ -600,7 +601,7 @@ def main(args):
     cnds_info_file = None
     
     cnds_info = NodeInfo("leader1", "", 8081)
-    node_config = NodeInfo("node1", "", 8080)
+    node_config = NodeInfo(str(uuid1()), "", 8080)
         
     # Parse command line arguments
     for arg in args[1:]:
