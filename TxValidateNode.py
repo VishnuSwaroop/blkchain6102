@@ -441,7 +441,7 @@ class TxValidateNode(NodeServer):
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
             for node_name, node_info in self.network_info.iteritems():
-                if not (node_info['ip'] == self.local_info.ip and node_info['port'] == self.local_info.port):
+                if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
                     print("Broadcasting to {0}".format(node_info))
                     try:
                         resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict, timeout=3)
@@ -577,7 +577,7 @@ def main(args):
     cnds_info_file = None
     
     cnds_info = NodeInfo("leader1", "", 8081)
-    node_config = NodeInfo("node1", "", 8080)
+    node_config = NodeInfo("node2", "", 8080)
         
     # Parse command line arguments
     for arg in args[1:]:
