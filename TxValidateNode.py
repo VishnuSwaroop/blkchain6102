@@ -5,7 +5,7 @@ from NodeClient import *
 from ProofOfWork import *
 from tx_format import *
 from blk_format import *
-from hashcash import *
+#from hashcash import *
 from globalhash import *
 from encryption_methods import *
 
@@ -22,11 +22,13 @@ class TxValidateNode(NodeServer):
         
         pubkey_filename = "node_public_key.pem"
         
-        real_cnds = False
+        real_cnds = True
         if real_cnds:
             self.connect_to_cnds(pubkey_filename)
         else:
             self.network_info = { "node1": NodeInfo("node1", "localhost", 8080), "node2": NodeInfo("node2", "localhost", 8081) }
+            TxValidateNode.store_network_info(self.network_info)
+            print("Network info retrieved: " + str(self.network_info))
             self.start_server()
         
     def run(self):
@@ -105,6 +107,18 @@ class TxValidateNode(NodeServer):
         return network_info
     
     @staticmethod
+    def load_network_info():
+        network_info = None
+        with open('network.json','r') as data_file:    
+            network_info = json.load(data_file)
+        return network_info
+    
+    @staticmethod
+    def store_network_info(network_info):
+        with open('network.json', 'w') as outfile:
+            json.dump(TxValidateNode.get_network_info_dict(network_info), outfile, indent=4, sort_keys=True)#store the information about the new node
+    
+    @staticmethod
     def get_network_info_dict(network_info):
         network_info_dict = { }
         for name, node in network_info.iteritems():
@@ -119,11 +133,9 @@ class TxValidateNode(NodeServer):
     def check_and_add_node_info(self, client_info):
         if client_info.name not in self.network_info:
             print("Discovered new node at {0}".format(client_info))
-            with open('network.json','r') as data_file:    
-                self.network_info = json.load(data_file)
+            self.network_info = TxValidateNode.load_network_info()
             self.network_info[client_info.name] = client_info
-            with open('network.json', 'w') as outfile:
-                json.dump(self.network_info, outfile, indent=4, sort_keys=True)#store the information about the new node
+            TxValidateNode.store_network_info(self.network_info)
     
     def handle_get(self, fcn, payload_dict, client_info):
         print("Function [{0}] from {1} Payload: {2}".format(fcn, client_info, payload_dict))
@@ -410,8 +422,14 @@ class TxValidateNode(NodeServer):
                     try:
                         resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict)
                     except:
-                        # TODO: remove nodes that do not respond from the list after some number of failed attempts
-                        pass
+                        # Remove nodes that do not respond from the list after some number of failed attempts
+                        if hasattr(self.network_info[node_name], "failed_broadcasts"):
+                            self.network_info[node_name].failed_broadcasts += 1
+                            
+                            if self.network_info[node_name].failed_broadcasts > 3:
+                                del self.network_info[node_name]
+                        else:
+                            self.network_info[node_name] = 0
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
     
@@ -530,13 +548,16 @@ def main(args):
     node_config_file = None
     cnds_info_file = None
     
-    cnds_info = NodeInfo("leader1", "localhost", 8081)
-    node_config = NodeInfo("node1", "localhost", 8080)
+    cnds_info = NodeInfo("leader1", "", 8081)
+    node_config = NodeInfo("node1", "", 8080)
         
     # Parse command line arguments
     for arg in args[1:]:
         if not node_config_file:
-            node_config_file = arg
+            if arg.isdigit():
+                node_config.port = int(arg)    
+            else:
+                node_config_file = arg
         else:
             cnds_info_file = arg
     

@@ -13,13 +13,10 @@ class TxOriginNode:
         self.txs = txs
         
         self.get_node_info()
-        
-    def start(self):
-        NodeClient.run()
     
     def get_node_info(self):
         print("Retrieving node info from CNDS")
-        """
+        
         resp_dict = get_validating_node()
         
         # Check if resp_dict is a string
@@ -31,8 +28,8 @@ class TxOriginNode:
             print("TxValidateNode to contact is {0}".format(self.node_info))
         else:
             raise Exception("Failed to get validating node info: " + str(resp_dict))
-        """
-        self.node_info = NodeInfo("node1", "localhost", 8080)
+        
+        #self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
         
         # Send transaction if this succeeds
         if self.txs:
@@ -54,7 +51,7 @@ import sys
 
 def main(args):
     cnds_info_path = None
-    cnds_info = NodeInfo(None, "localhost", 1234)
+    cnds_info = NodeInfo(None, "", 1234)
     
     # Parse command line arguments
     for arg in args[1:]:
@@ -78,7 +75,6 @@ def main(args):
     tx9 = tx_object("localhost", "me", 9, None, None, previous_hash=tx8.current_hash)
     txs = [tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8, tx9]
     node = TxOriginNode(cnds_info, txs)
-    node.start()
     # except Exception as exc:
     #   print("Fatal Error: " + str(exc))
 

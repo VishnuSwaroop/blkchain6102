@@ -12,12 +12,12 @@ from NodeInfo import *
 
 class NodeClient:
     @staticmethod
-    def send_request(sender_info, recipient_info, method, fcn, req_dict, req_cipher=None, resp_cipher=None):
+    def send_request(sender_info, recipient_info, method, fcn, req_dict, req_cipher=None, resp_cipher=None, timeout=5):
         uri = "http://{0}:{1}/{2}".format(recipient_info.ip, recipient_info.port, fcn)
         method_fcn = requests.get
         if method == "POST":
             method_fcn = requests.post
-        resp = method_fcn(uri, data=serialize_payload(req_dict, sender_info, req_cipher))
+        resp = method_fcn(uri, data=serialize_payload(req_dict, sender_info, req_cipher), timeout=timeout)
         print("Response JSON: {0}".format(resp.json()))
         resp_dict, recv_info = deserialize_payload(resp.json(), resp_cipher)
         return resp_dict
