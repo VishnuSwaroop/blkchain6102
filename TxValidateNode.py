@@ -317,7 +317,7 @@ class TxValidateNode(NodeServer):
             with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
                 json.dump({'newest_hash':block_broadcast['block_hash']},data_file,indent=4, sort_keys=True)
         
-            
+            return True
             
         else:
             print('Previous block not in blockchain !! Sending query to other nodes for longest chain')
@@ -344,14 +344,17 @@ class TxValidateNode(NodeServer):
     def handle_add_block(self, block_dict, client_info):
         if self.validate_block(block_dict):
             # Abort current proof of work
-            old_uc_pool = self.abort_proof_of_work()
+            old_block = self.abort_proof_of_work()
             
             # Read current blockchain
             with open('tx_database.json','r') as data_file:
                 pool_state = json.load(data_file)
             
             # Merge unconfirmed pools
-            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool.to_dict()["transactions"], pool_state, block_dict["block_dict"]["transactions"])
+            old_uc_pool = {}
+            if old_block:
+                old_uc_pool = old_block.to_dict()
+            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool["transactions"], pool_state, block_dict["block_dict"]["transactions"])
             
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
