@@ -18,7 +18,7 @@ class NodeClient:
         if method == "POST":
             method_fcn = requests.post
         resp = method_fcn(uri, data=serialize_payload(req_dict, sender_info, req_cipher), timeout=timeout)
-        print("Response JSON: {0}".format(resp.json()))
+        #print("Response JSON: {0}".format(resp.json()))
         resp_dict, recv_info = deserialize_payload(resp.json(), resp_cipher)
         return resp_dict
         #client = NodeClient(timeout)

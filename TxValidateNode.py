@@ -180,7 +180,7 @@ class TxValidateNode(NodeServer):
         print("Node requesting latest transaction for owner {0}".format(owner))
         tx_hashtable = load_global_hash()
         if owner in tx_hashtable:
-            return { "previous_hash": tx_hashtable[owner] }
+            return { "previous_hash": tx_hashtable[owner], "status": "ok" }
         return None
     
     def handle_new_tx(self, tx):

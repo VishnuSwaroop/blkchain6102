@@ -49,6 +49,18 @@ class TxOriginNode:
         else:
             raise Exception("Transaction was rejected: " + str(status))
         
+    def get_last_tx(self, owner):
+        print("Getting last transaction for " + str(owner))
+        resp_dict = NodeClient.send_request(None, self.node_info, 'GET', "latest_tx", { "owner": owner }, timeout=20)
+        status = resp_dict["status"]
+        
+        if status == "ok":
+            prev_tx = resp_dict["previous_hash"]
+            print("Previous transaction for {0} was {1}".format(owner, prev_tx))
+            return prev_tx
+        else:
+            raise Exception("No previous transaction for owner " + str(owner))
+        
 import sys
 # from TxOriginNode import *
 
@@ -91,6 +103,7 @@ def main(args):
     
     for tx in txs:
         node.send_new_tx(tx)
+        print("Last Transaction: " + node.get_last_tx("Owner1"))
         time.sleep(0.50)
         
     print("Done")
