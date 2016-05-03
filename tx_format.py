@@ -2,12 +2,12 @@ from Crypto.Hash import SHA512
 
 class tx_object:
     def __init__(self, origin, owner,value, owner_pubkey,upper_limit, previous_hash=None, current_hash=None):
-        self.previous_hash=previous_hash #generating new transactions and assigning this value is left to the user application, should be the prev tx's hash with all values
-        self.origin=origin
+        self.previous_hash=previous_hash #generating new transactions and assigning this value is left to the user application, should be the prev tx's hash 
         self.owner=owner
         self.owner_pubkey=owner_pubkey
         self.value=value
         self.upper_limit=upper_limit
+        self.origin = origin
         temp=str(self.previous_hash)+str(self.origin)+str(self.owner)+str(self.owner_pubkey)+str(self.value)+str(self.upper_limit)
         
         temp=SHA512.new(bytes(temp))

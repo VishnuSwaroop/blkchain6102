@@ -6,18 +6,28 @@ from ProofOfWork import *
 from tx_format import *
 from blk_format import *
 from hashcash import *
+from globalhash import *
+from encryption_methods import *
 
 class TxValidateNode(NodeServer):    
+    default_port = 8080
     def __init__(self, cnds_info, node_config):
         self.reactor = reactor
         self.uc_pool = []
         self.proof_of_work = None
-        self.network_info = None
+        self.network_info = { }
         
         self.local_info = node_config
         self.cnds_info = cnds_info
         
-        self.request_join()
+        pubkey_filename = "node_public_key.pem"
+        
+        real_cnds = False
+        if real_cnds:
+            self.connect_to_cnds(pubkey_filename)
+        else:
+            self.network_info = { "node1": NodeInfo("node1", "localhost", 8080), "node2": NodeInfo("node2", "localhost", 8081) }
+            self.start_server()
         
     def run(self):
         self.reactor.run()
@@ -26,46 +36,72 @@ class TxValidateNode(NodeServer):
         print("Starting transaction validation node server")
         NodeServer.__init__(self, self.local_info)
         print("Node listening for connections on {0}".format(self.local_info))
+      
+    def connect_to_cnds(self, pubkey_filename):
+        # Get node public key from file
+        self.node_public_key = read_node_pubkey(pubkey_filename)
         
+        # Retrieve CNDS key
+        cnds_public_key_text = get_and_check_cnds_key()
+        
+        # Generate session key
+        self.node_session_key = str(uuid.uuid1())[:32]
+        
+        # Exchange session key
+        if not cnds_sessionkey_ex(self.node_session_key, cnds_public_key_text):
+            raise Exception("Failed exchanging session keys with CNDS")    
+        
+        # Join network
+        join_status = encrypted_joinreq(self.node_session_key, self.local_info.name, pubkey_filename)
+        
+        if not join_status:
+            raise Exception("Failed to join")
+        
+        net_info = get_network_info(self.node_session_key)
+        
+        self.network_info = TxValidateNode.get_network_info_from_resp(net_info)
+        
+        # Store network information to disk
+        TxValidateNode.store_network_info(self.network_info)
+        
+        print("Network info retrieved: " + str(self.network_info))
+        
+        # Start http server for validating node
+        self.start_server()
+      
+    """  
     def request_join(self):
         print("Requesting join")
         req_dict = { "join": True }
-        NodeClient.create_request(self.local_info, self.cnds_info, "POST", "join", req_dict, self.handle_join_resp)
-        
-    def handle_join_resp(self, payload_dict, fail):
-        if not fail:
-            if payload_dict["status"] == "approved":
-                print("Successfully joined")
-                self.request_network_info()
-            else:
-                print("CNDS rejected join")
+        payload_dict = NodeClient.send_request(self.local_info, self.cnds_info, "POST", "join", req_dict)
+        if payload_dict["status"] == "approved":
+            print("Successfully joined")
+            self.request_network_info()
         else:
-            raise Exception("Failed to get network info: " + str(fail))
+            print("CNDS rejected join")
         
     def request_network_info(self):
         print("Requesting network info")
         req_dict = { "get_nodes": True }
-        NodeClient.create_request(self.local_info, self.cnds_info, "GET", "network", req_dict, self.handle_network_info_resp)
-    
-    def handle_network_info_resp(self, payload_dict, fail):
-        print("Network info response received")
-        if not fail:
-            self.network_info = TxValidateNode.get_network_info_from_resp(payload_dict)
+        payload_dict = NodeClient.send_request(self.local_info, self.cnds_info, "GET", "network", req_dict)
+        self.network_info = TxValidateNode.get_network_info_from_resp(payload_dict)
             
-            if self.network_info:
-                print("Network info retrieved: " + str(self.network_info))
-                TxValidateNode.store_network_info(self.network_info)
-                self.start_server()
-            else:
-                raise Exception("Failed to get network info. Invalid response from CNDS")
+        if self.network_info:
+            print("Network info retrieved: " + str(self.network_info))
+            TxValidateNode.store_network_info(self.network_info)
+            self.start_server()
         else:
-            raise Exception("Failed to get network info: " + str(fail))
-        
+            raise Exception("Failed to get network info. Invalid response from CNDS")
+    """
     @staticmethod
     def get_network_info_from_resp(resp):
         network_info = { }
-        for name, node_dict in resp.iteritems():
-            network_info[name] = NodeInfo.from_dict(node_dict)
+        for node_name, node_details in resp.iteritems():
+            node_dict = json.loads(node_details)
+            network_info[node_name] = NodeInfo(node_name,
+                                          node_dict["ip_address"],
+                                          TxValidateNode.default_port,
+                                          node_dict["public_key"])
         return network_info
     
     @staticmethod
@@ -94,6 +130,9 @@ class TxValidateNode(NodeServer):
         resp_dict = None
         if fcn == "blockchain":
             resp_dict = self.handle_get_blockchain(payload_dict)
+        elif fcn == "ping":
+            print("Ping received from CNDS")
+            resp_dict = { "status": "ok" }
             
         return resp_dict
         
@@ -124,16 +163,21 @@ class TxValidateNode(NodeServer):
         new_tx=tx_object(transaction['origin'], transaction['owner'],transaction['value'], transaction['owner_pubkey'],transaction['upper_limit'], transaction['previous_hash'], transaction['current_hash'])
         new_tx.to_string()
         
-        with open('tx_database.json','r') as data_file:    
-            uc_pool = json.load(data_file)
-        #dict_state[transaction['current_hash']]= {'previous_hash':transaction['previous_hash'],'current_dict':new_tx.to_dict()}
         
-        uc_pool[transaction['current_hash']]= new_tx.to_dict()  #Here the previous hash inside new_tx could be None or some dict, if None, it is a new origin node that is sending a tx
-        
-        with open('tx_database.json', 'w') as outfile:
-            json.dump(uc_pool, outfile, indent=4, sort_keys=True) #adding to unconfirmed pool
+        #Global hash table check
+        if global_hash_table(new_tx.to_dict()):
+            with open('tx_database.json','r') as data_file:    
+                uc_pool = json.load(data_file)
+            #dict_state[transaction['current_hash']]= {'previous_hash':transaction['previous_hash'],'current_dict':new_tx.to_dict()}
             
-        overflow_tx = self.check_overflow()
+            uc_pool[transaction['current_hash']]= new_tx.to_dict()  #Here the previous hash inside new_tx could be None or some dict, if None, it is a new origin node that is sending a tx
+            
+            with open('tx_database.json', 'w') as outfile:
+                json.dump(uc_pool, outfile, indent=4, sort_keys=True) #adding to unconfirmed pool
+                
+            overflow_tx = self.check_overflow()
+        else:
+            return { "status": "previous transaction does not match records" }
 
         if overflow_tx and not self.proof_of_work:
             with open('tx_database.json','w') as outfile:    
@@ -184,7 +228,8 @@ class TxValidateNode(NodeServer):
         difficulty = 12
         block_dict = block_broadcast['block_dict']
         previoushash = block_dict['block_header']['previoushash']
-        header_data = str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+str( block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount'])+str( block_dict['block_header']['nonce'])
+        #send same data as last time, but also pass the nonce
+        header_data = str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+str( block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount']) #+str( block_dict['block_header']['nonce'])
         
         if not ProofOfWork.verify(previoushash, header_data, block_dict['block_header']['nonce'], difficulty):
             return False
@@ -204,9 +249,13 @@ class TxValidateNode(NodeServer):
         if(flag==True):
             with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
                     newest_hash_dict=json.load(data_file)
-            newest_blkhash=newest_hash_dict['newest_hash']
+            
+            if newest_hash_dict.get('newest_hash'):
+                newest_blkhash=newest_hash_dict['newest_hash']
+            else:
+                newest_blkhash=None
             #check hash of latest block
-            if block_broadcast['block_dict']['block_header']['previoushash']==newest_blkhash:
+            if block_broadcast['block_dict']['block_header']['previoushash'] in (newest_blkhash, None, '', 'None'):
                 tx_verify=''
                 for tx in tx_order_dict.keys():
                     blockhash=newest_blkhash
@@ -227,7 +276,7 @@ class TxValidateNode(NodeServer):
                 
                 
                 #If all transactions valid, store block . Reuse above code to add to file
-        
+                #TODO: Send confirmation back to the other validating node about this acceptance
                 with open('blockchain_database.json','r') as data_file:    
                     blockchain_state = json.load(data_file) #returns the entire blockchain
                 
@@ -243,7 +292,7 @@ class TxValidateNode(NodeServer):
                 
                 
             else:
-                print('Previous block not in blockchain !! ')
+                print('Previous block not in blockchain !! Sending query to other nodes for longest chain')
                 
     def merge_unconfirmedpool(self,pool1,pool2,pool3):
         with open('tx_database.json','r') as data_file:    
@@ -356,15 +405,15 @@ class TxValidateNode(NodeServer):
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
             for node_name, node_info in self.network_info.iteritems():
-                if not (node_info.ip == self.local_info.ip and node_info.port == self.local_info.port):
+                if not (node_info['ip'] == self.local_info.ip and node_info['port'] == self.local_info.port):
                     print("Broadcasting to {0}".format(node_info))
-                    NodeClient.create_request(self.local_info, node_info, method, fcn, msg_dict, self.handle_broadcast_resp)
+                    try:
+                        resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict)
+                    except:
+                        # TODO: remove nodes that do not respond from the list after some number of failed attempts
+                        pass
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
-    
-    def handle_broadcast_resp(self, resp_dict, fail):
-        # TODO: remove nodes that do not respond from the list after some number of failed attempts
-        pass
     
     @staticmethod
     def read_latest_hash():
@@ -481,8 +530,8 @@ def main(args):
     node_config_file = None
     cnds_info_file = None
     
-    cnds_info = NodeInfo("leader1", "localhost", 1234)
-    node_config = NodeInfo("node1", "localhost", 1235)
+    cnds_info = NodeInfo("leader1", "localhost", 8081)
+    node_config = NodeInfo("node1", "localhost", 8080)
         
     # Parse command line arguments
     for arg in args[1:]:

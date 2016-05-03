@@ -24,7 +24,7 @@ class NodeServer(resource.Resource):
         fcn = request.uri[1:]
         
         # TODO: set the ciphers based on which node issued the request
-        request_cipher = None   
+        request_cipher = None
         response_cipher = None
        
         request_str = request.content.getvalue()
@@ -34,12 +34,12 @@ class NodeServer(resource.Resource):
         #print("Request String: " + str(request_str))
         
         try:
-            recv_dict = deserialize_payload(request_str, request_cipher)
-            payload_dict = recv_dict["payload"]
-            client_info = None
-            
-            if "sender" in recv_dict and recv_dict["sender"]:
-                client_info = NodeInfo.from_dict(recv_dict["sender"])
+            if request_str:
+                print("Request String: {0}".format(request_str))
+                payload_dict, client_info = deserialize_payload(json.loads(request_str), request_cipher)
+            else:
+                payload_dict = None
+                client_info = None
             
         except:
             print("Failed to deserialize request:")
@@ -52,7 +52,7 @@ class NodeServer(resource.Resource):
             resp_dict = handler(fcn, payload_dict, client_info)
             
             try:
-                resp_str = serialize_payload(resp_dict, response_cipher)
+                resp_str = serialize_payload(resp_dict, None, response_cipher)
             except:
                 print("Failed to serialize response:")
                 print("\tFunction: " + str(fcn))
@@ -64,7 +64,7 @@ class NodeServer(resource.Resource):
             return resp_str
         else:
             request.setResponseCode(404)
-            return "Unknown request"    # TODO: this should probably handle the JSON serialization of the payload and hash?
+            return "Unknown request"   
     
     def render_GET(self, request):
         #print("GET request: " + request.uri)

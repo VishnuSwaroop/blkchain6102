@@ -1,31 +1,31 @@
 
 class NodeInfo:
-    def __init__(self, name=None, ip=None, port=None, pubkey=None, pvtkey=None):
+    def __init__(self, name=None, ip=None, port=None, pubkey=None):
         self.name = name
         self.ip = ip
         self.port = port
         self.pubkey = pubkey
-        self.pvtkey = pvtkey
         
     def get_dict(self):
-        return self.__dict__
+        return { "name": self.name, "ip": self.ip, "port": self.port, "pubkey": self.pubkey } 
     
     @staticmethod
-    def from_dict(d):
+    def from_dict(d, default_port=80):
         ip = d["ip"]
-        port = d["port"]
-        pubkey = None
-        pvtkey = None
+        port = default_port
         name = None
+        pubkey = None
         
         if "name" in d:
             name = d["name"]
+            
         if "pubkey" in d:
             pubkey = d["pubkey"]
-        if "pvtkey" in d:
-            pvtkey = d["pvtkey"]
+            
+        if "port" in d:
+            port = d["port"]
         
-        return NodeInfo(name, ip, port, pubkey, pvtkey)
+        return NodeInfo(name, ip, port, pubkey)
     
     def get_uri(self):
         return "{0}:{1}".format(self.ip, self.port)

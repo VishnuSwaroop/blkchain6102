@@ -1,11 +1,9 @@
 import json
 import bson
+import pickle
 from collections import OrderedDict
 from uuid import uuid4
-from Crypto import Random
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
-from Crypto.Hash import SHA512
+from AESCipher import *
 
 from NodeInfo import *
 
@@ -14,28 +12,8 @@ def addr_port_to_str(ip, port):
     
 def addr_to_str(addr):
     return addrPortToStr(addr.host, addr.port)
-    
-def encrypt_payload(payload_str, cipher):
-    return payload_str
-    #return cipher.encrypt(payload_str)
-    #stride = 470        # TODO: how is this size related to key size? any larger and cipher.encrypt will complain
-    #blocks = []
-    #for i in xrange(0, len(payload_str)-1, stride):
-    #    end_stride = min(i+stride-1, len(payload_str)-1)
-    #    blocks.append(cipher.encrypt(payload_str[i:end_stride]))
-    #return "".join(blocks)
-    
-def decrypt_payload(encrypted_payload_str, cipher):
-    return encrypted_payload_str
-    #return cipher.decrypt(encrypted_payload_str)
-    #stride = 470        # TODO: how is this size related to key size? any larger and cipher.encrypt will complain
-    #blocks = []
-    #for i in xrange(0, len(encrypted_payload_str)-1, stride):
-    #    end_stride = min(i+stride-1, len(encrypted_payload_str)-1)
-    #    blocks.append(cipher.decrypt(encrypted_payload_str[i:end_stride]))
-    #return "".join(blocks)
-    
-def serialize_payload(payload_dict, cipher):
+ 
+def serialize_payload(payload_dict, sender_info, cipher):
     # Serialize message dictionary to JSON payload
     payload = json.dumps(payload_dict)
     # payload = bson.BSON.encode(payload_dict)
@@ -43,38 +21,77 @@ def serialize_payload(payload_dict, cipher):
     
     # Encrypt JSON payload
     if cipher:
-        payload = NodeMessage.encrypt_payload(payload, cipher)
+        encrypted_payload = cipher.encrypt(payload)
+        encrypted_payload = pickle.dumps(encrypted_payload)
+        #payload = NodeMessage.encrypt_payload(payload, cipher)
+    else:
+        encrypted_payload = payload
         
     # Compute hash of encrypted payload
-    datahash = SHA512.new(bytes(str(payload))).hexdigest()
+    msg_hash = SHA256.new(payload).hexdigest()
     
     # Create binary message string
-    msg_str = "".join([payload, datahash])  # TODO: should really use something like bson for this...
+    #msg_str = "".join([payload, datahash])
+    msg = {
+        "message": encrypted_payload,
+        "message-hash": msg_hash,
+    }
+    
+    if sender_info:
+        msg["sender_ip"] = sender_info.ip,
+        msg["sender_port"] = sender_info.port
+        msg["sender_name"] = sender_info.name
         
-    return msg_str
+    return json.dumps(msg)
 
 def decode_bson(payload_str):
     return bson.BSON(payload_str).decode()
     
-def deserialize_payload(msg_str, cipher):
+def deserialize_payload(msg_dict, cipher):
     # Interpret HTTP binary message string
-    end = len(msg_str) - 128       # TODO: should really use something like bson for this...
-    datahash = msg_str[end:]
-    payload = msg_str[:end]
+    #end = len(msg_str) - 128       # TODO: should really use something like bson for this...
+    #datahash = msg_str[end:]
+    #payload = msg_str[:end]
     
-    print("msg_str={0}\ndatahash={1}\npayload={2}".format(msg_str, datahash, payload))
+    #print("msg_str={0}\ndatahash={1}\npayload={2}".format(msg_str, datahash, payload))
+
+    print("Message: {0}".format(msg_dict))
     
-    # Compute hash of encrypted data
-    computed_hash = SHA512.new(bytes(str(payload)))
+    if "sender_name" in msg_dict:
+        sender_name = msg_dict["sender_name"]
+    else:
+        sender_name = None
+        
+    if "sender_ip" in msg_dict:
+        sender_ip = msg_dict["sender_ip"]
+    else:
+        sender_ip = None
+        
+    if "sender_port" in msg_dict:
+        sender_port = msg_dict["sender_port"]
+    else:
+        sender_port = None
+        
+    sender_info = NodeInfo(sender_name, sender_ip, sender_port)
+    
+    print("Sender Info: {0}".format(sender_info))
+    
+    encrypted_payload = msg_dict["message"]
+    msg_hash = msg_dict["message-hash"]
+    
+    if cipher:
+        encrypted_payload = pickle.loads(encrypted_payload)
+        payload = cipher.decrypt(encrypted_payload)
+    else:
+        payload = encrypted_payload
+    
+    # Compute hash of unencrypted data
+    computed_hash = SHA256.new(payload)
     
     # Verify hash
-    if computed_hash.hexdigest() != datahash:
+    if computed_hash.hexdigest() != msg_hash:
         print("Payload deserialization failed due to invalid hash")
         return None
-        
-    # Decrypt message
-    if cipher:
-        payload = NodeMessage.decrypt_payload(payload, cipher)
     
     # Get payload dictionary
     payload_dict = json.loads(payload, object_pairs_hook=OrderedDict)
@@ -85,7 +102,7 @@ def deserialize_payload(msg_str, cipher):
     if not payload_dict:
         payload_dict = { }
         
-    return payload_dict
+    return payload_dict, sender_info
 
 def generate_node_config(node_config_path, nodeip, nodeport):
     nodename = str(uuid4())

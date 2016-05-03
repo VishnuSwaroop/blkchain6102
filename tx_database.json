@@ -7,32 +7,5 @@
         "previous_hash": "3afce33d2e8df90ef6230124f414987c31eaaaeb1487e138d2d04a75db438cbf512c271fa7371a6fc98d8969d707c8ba9c74eb0c76532101227b99b3f1754d64", 
         "upper_limit": "None", 
         "value": "9"
-    }, 
-    "0d302eac47cd7164391468da4f5b0e9a58ba6fa572679708479b7ae4299f9ab849489c8cd391723c332f8f04763366b191d6203f2976babec1c22980156cea0b": {
-        "current_hash": "0d302eac47cd7164391468da4f5b0e9a58ba6fa572679708479b7ae4299f9ab849489c8cd391723c332f8f04763366b191d6203f2976babec1c22980156cea0b", 
-        "origin": "localhost", 
-        "owner": "me", 
-        "owner_pubkey": "None", 
-        "previous_hash": "8a88f67b4174cc2b292811f5c8d33a9fe543fdd9b168454f55633bc0c150e2fc8b463b55b6e2d0d73266a0cbedff2ac05e5d2d6a5f4c4c2485a994036b6b4815", 
-        "upper_limit": "None", 
-        "value": "7"
-    }, 
-    "3afce33d2e8df90ef6230124f414987c31eaaaeb1487e138d2d04a75db438cbf512c271fa7371a6fc98d8969d707c8ba9c74eb0c76532101227b99b3f1754d64": {
-        "current_hash": "3afce33d2e8df90ef6230124f414987c31eaaaeb1487e138d2d04a75db438cbf512c271fa7371a6fc98d8969d707c8ba9c74eb0c76532101227b99b3f1754d64", 
-        "origin": "localhost", 
-        "owner": "me", 
-        "owner_pubkey": "None", 
-        "previous_hash": "0d302eac47cd7164391468da4f5b0e9a58ba6fa572679708479b7ae4299f9ab849489c8cd391723c332f8f04763366b191d6203f2976babec1c22980156cea0b", 
-        "upper_limit": "None", 
-        "value": "8"
-    }, 
-    "8a88f67b4174cc2b292811f5c8d33a9fe543fdd9b168454f55633bc0c150e2fc8b463b55b6e2d0d73266a0cbedff2ac05e5d2d6a5f4c4c2485a994036b6b4815": {
-        "current_hash": "8a88f67b4174cc2b292811f5c8d33a9fe543fdd9b168454f55633bc0c150e2fc8b463b55b6e2d0d73266a0cbedff2ac05e5d2d6a5f4c4c2485a994036b6b4815", 
-        "origin": "localhost", 
-        "owner": "me", 
-        "owner_pubkey": "None", 
-        "previous_hash": "e028a46257ba64f2e6a79c1861f144afb120e837f021cc4d5e4cd4dd3785a8acb6525237e50d9cc341b427d27906224df773b2d5541fae4f472a4b9fac53cefe", 
-        "upper_limit": "None", 
-        "value": "6"
     }
 }

@@ -1,20 +1,30 @@
-from twisted.internet import reactor, endpoints, protocol
-from twisted.internet.endpoints import TCP4ServerEndpoint
-from twisted.internet.defer import succeed
-from twisted.web.client import Agent, HTTPConnectionPool
-from twisted.web.http_headers import Headers
-from twisted.web.iweb import IBodyProducer
-from zope.interface import implements
+#from twisted.internet import reactor, endpoints, protocol
+#from twisted.internet.endpoints import TCP4ServerEndpoint
+#from twisted.internet.defer import succeed
+#from twisted.web.client import Agent, HTTPConnectionPool
+#from twisted.web.http_headers import Headers
+#from zope.interface import implements
+#from twisted.web.iweb import IBodyProducer
 
+from AESCipher import *
 from TxNodeUtil import *
 from NodeInfo import *
 
 class NodeClient:
     @staticmethod
-    def create_request(sender_info, recipient_info, method, fcn, req_dict, resp_handler, req_cipher=None, resp_cipher=None, timeout=2.0):
-        client = NodeClient(timeout)
-        client.send_request(sender_info, recipient_info, method, fcn, req_dict, resp_handler, req_cipher, resp_cipher)
-        
+    def send_request(sender_info, recipient_info, method, fcn, req_dict, req_cipher=None, resp_cipher=None):
+        uri = "http://{0}:{1}/{2}".format(recipient_info.ip, recipient_info.port, fcn)
+        method_fcn = requests.get
+        if method == "POST":
+            method_fcn = requests.post
+        resp = method_fcn(uri, data=serialize_payload(req_dict, sender_info, req_cipher))
+        print("Response JSON: {0}".format(resp.json()))
+        resp_dict, recv_info = deserialize_payload(resp.json(), resp_cipher)
+        return resp_dict
+        #client = NodeClient(timeout)
+        #client.send_request(sender_info, recipient_info, method, fcn, req_dict, resp_handler, req_cipher, resp_cipher)
+    
+"""    
     @staticmethod
     def run():
         reactor.run()
@@ -82,4 +92,4 @@ class NodeClient:
             # Parse failure
             print("Failure: " + str(fail))
             response_handler(None, fail)
-            
+"""

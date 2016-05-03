@@ -1,5 +1,7 @@
 from NodeClient import *
 from tx_format import *
+from encryption_methods import *
+from TxValidateNode import TxValidateNode
     
 class TxOriginNode:
     def __init__(self, cnds_info, txs):
@@ -17,37 +19,35 @@ class TxOriginNode:
     
     def get_node_info(self):
         print("Retrieving node info from CNDS")
-        NodeClient.create_request(None, self.cnds_info, 'GET', "node", { "get_node_info": True }, self.handle_node_info_resp)
+        """
+        resp_dict = get_validating_node()
         
-    def handle_node_info_resp(self, resp_dict, fail):
-        if not fail:
-            # TODO: do some validation here
-            self.node_info = NodeInfo.from_dict(resp_dict)
+        # Check if resp_dict is a string
+        if not isinstance(resp_dict, basestring):
+            self.node_info = NodeInfo(resp_dict["node_name"],
+                                resp_dict["ip_address"],
+                                TxValidateNode.default_port,
+                                resp_dict["public_key"])
             print("TxValidateNode to contact is {0}".format(self.node_info))
-            
-            # Send transaction if this succeeds
-            if self.txs:
-                for tx in self.txs:
-                    self.send_new_tx(tx)
-                    # self.reactor.callLater(1, self.send_new_tx, tx)
-        else:    
-            raise Exception("Failed to get node info: " + str(fail))
+        else:
+            raise Exception("Failed to get validating node info: " + str(resp_dict))
+        """
+        self.node_info = NodeInfo("node1", "localhost", 8080)
+        
+        # Send transaction if this succeeds
+        if self.txs:
+            for tx in self.txs:
+                self.send_new_tx(tx)
         
     def send_new_tx(self, tx):
         print("Sending transaction: " + str(tx))
-        NodeClient.create_request(None, self.node_info, 'POST', "new_tx", tx.to_dict(), self.handle_new_tx_resp)
+        resp_dict = NodeClient.send_request(None, self.node_info, 'POST', "new_tx", tx.to_dict())
+        status = resp_dict["status"]
         
-    def handle_new_tx_resp(self, resp_dict, fail):
-        if not fail:
-            # TODO: do some validation here
-            status = resp_dict["status"]
-            
-            if status == "ok":
-                print("Transaction successfully added")
-            else:
-                raise Exception("Transaction was rejected: " + str(status))
-        else:    
-            raise Exception("Failed to get node info: " + str(fail))
+        if status == "ok":
+            print("Transaction successfully added")
+        else:
+            raise Exception("Transaction was rejected: " + str(status))
         
 import sys
 # from TxOriginNode import *

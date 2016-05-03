@@ -25,7 +25,8 @@ class ProofOfWork:
 
             # mask is an int with least-significant 'q' bits set to 1
             mask = 2 ** difficulty - 1
-        
+            if not prev_hash:
+                prev_hash = 128 * '0'
             # produce hash string and hash int for input string
             hV = prev_hash
             nHv = intify(hV)
