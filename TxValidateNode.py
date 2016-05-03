@@ -275,13 +275,13 @@ class TxValidateNode(NodeServer):
         
         
         if(flag==True):
-            with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
-                    newest_hash_dict=json.load(data_file)
-            
-            if newest_hash_dict.get('newest_hash'):
-                newest_blkhash=newest_hash_dict['newest_hash']
-            else:
-                newest_blkhash=None
+            # with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
+            #         newest_hash_dict=json.load(data_file)
+            # 
+            # if newest_hash_dict.get('newest_hash'):
+            #     newest_blkhash=newest_hash_dict['newest_hash']
+            # else:
+            #     newest_blkhash=None
             # #check hash of latest block
             # if block_broadcast['block_dict']['block_header']['previoushash'] in (newest_blkhash, None, '', 'None'):
             #     tx_verify=''
@@ -355,7 +355,7 @@ class TxValidateNode(NodeServer):
             
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
-                json.dump(data_file, final_uc_pool)
+                json.dump(final_uc_pool, data_file)
                 
             return { "status": "ok" }
         else:
@@ -439,7 +439,7 @@ class TxValidateNode(NodeServer):
             
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
-                json.dump(data_file, final_uc_pool)
+                json.dump(final_uc_pool, data_file)
         
         self.proof_of_work = None
         
