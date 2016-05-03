@@ -275,52 +275,52 @@ class TxValidateNode(NodeServer):
         
         
         if(flag==True):
-            with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
-                    newest_hash_dict=json.load(data_file)
+            # with open('newest_blkhash.json','r') as data_file: #reads the hash of the latest added block
+            #         newest_hash_dict=json.load(data_file)
+            # 
+            # if newest_hash_dict.get('newest_hash'):
+            #     newest_blkhash=newest_hash_dict['newest_hash']
+            # else:
+            #     newest_blkhash=None
+            # #check hash of latest block
+            # if block_broadcast['block_dict']['block_header']['previoushash'] in (newest_blkhash, None, '', 'None'):
+            #     tx_verify=''
+            #     for tx in tx_order_dict.keys():
+            #         blockhash=newest_blkhash
+            #         while blockhash != None:
+            #             #value = d.get(key, "empty")
+            #             tx_verify=blockchain_dict[blockhash]['transactions'].get(tx['previous_hash'])
+            #             if tx_verify not in ('', None):
+            #                 print ('------------------ Transaction Verified !! ----------------------')
+            #                 break
+            #             else:
+            #                 blockhash=blockchain_dict[blockhash]['block_header']['previoushash']
+            #     
+            #         
+            #         
+            #         if tx_verify in ('',None):
+            #             print ('------------------ A transaction is not verified !! ----------------------')
+            #             return False
+                
+                
+            #If all transactions valid, store block . Reuse above code to add to file
+            #TODO: Send confirmation back to the other validating node about this acceptance
+            with open('blockchain_database.json','r') as data_file:    
+                blockchain_state = json.load(data_file) #returns the entire blockchain
             
-            if newest_hash_dict.get('newest_hash'):
-                newest_blkhash=newest_hash_dict['newest_hash']
-            else:
-                newest_blkhash=None
-            #check hash of latest block
-            if block_broadcast['block_dict']['block_header']['previoushash'] in (newest_blkhash, None, '', 'None'):
-                tx_verify=''
-                for tx in tx_order_dict.keys():
-                    blockhash=newest_blkhash
-                    while blockhash != None:
-                        #value = d.get(key, "empty")
-                        tx_verify=blockchain_dict[blockhash]['transactions'].get(tx['previous_hash'])
-                        if tx_verify not in ('', None):
-                            print ('------------------ Transaction Verified !! ----------------------')
-                            break
-                        else:
-                            blockhash=blockchain_dict[blockhash]['block_header']['previoushash']
-                
-                    
-                    
-                    if tx_verify in ('',None):
-                        print ('------------------ A transaction is not verified !! ----------------------')
-                        return False
-                
-                
-                #If all transactions valid, store block . Reuse above code to add to file
-                #TODO: Send confirmation back to the other validating node about this acceptance
-                with open('blockchain_database.json','r') as data_file:    
-                    blockchain_state = json.load(data_file) #returns the entire blockchain
-                
-                
-                blockchain_state[block_broadcast['block_hash']]=block_broadcast['block_dict']
-                
-                with open('blockchain_database.json','w') as outputfile:    
-                    json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
-                
-                with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
-                    json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
             
-                
-                
-            else:
-                print('Previous block not in blockchain !! Sending query to other nodes for longest chain')
+            blockchain_state[block_broadcast['block_hash']]=block_broadcast['block_dict']
+            
+            with open('blockchain_database.json','w') as outputfile:    
+                json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
+            
+            with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
+                json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
+        
+            
+            
+        else:
+            print('Previous block not in blockchain !! Sending query to other nodes for longest chain')
                 
     def merge_unconfirmedpool(self,pool1,pool2,pool3):
         with open('tx_database.json','r') as data_file:    
@@ -341,7 +341,7 @@ class TxValidateNode(NodeServer):
             
         return final
     
-    def handle_add_block(self, block_dict, client_info): 
+    def handle_add_block(self, block_dict, client_info):
         if self.validate_block(block_dict):
             # Abort current proof of work
             old_uc_pool = self.abort_proof_of_work()
@@ -356,11 +356,14 @@ class TxValidateNode(NodeServer):
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
                 json.dump(data_file, final_uc_pool)
+                
+            return { "status": "ok" }
         else:
             # Query sender's chain to determine if it's longer
-            self.request_blocks(client_info, 5, block_dict["block_hash"])
+            #self.request_blocks(client_info, 5, block_dict["block_hash"])
+            print("Failed to validate block. Continuing work on new transactions")
         
-        return { "status": "ok" }
+        return { "status": "rejected" }
         
     def generate_block(self,dict_state): #dict_state is a dict of transactions
         print '########## Generating Block ###########'   
