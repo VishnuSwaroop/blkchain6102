@@ -107,11 +107,18 @@ class TxValidateNode(NodeServer):
         return network_info
     
     @staticmethod
+    def get_network_info_from_dict(d):
+        network_info = { }
+        for node_name, node_dict in d.iteritems():
+            network_info[node_name] = NodeInfo.from_dict(node_dict)
+        return network_info
+    
+    @staticmethod
     def load_network_info():
         network_info = None
         with open('network.json','r') as data_file:    
             network_info = json.load(data_file)
-        return network_info
+        return TxValidateNode.get_network_info_from_dict(network_info)
     
     @staticmethod
     def store_network_info(network_info):
@@ -585,7 +592,7 @@ def main(args):
     for arg in args[1:]:
         if not node_config_file:
             if arg.isdigit():
-                node_config.port = int(arg)    
+                node_config.port = int(arg)
             else:
                 node_config_file = arg
         else:
