@@ -353,8 +353,8 @@ class TxValidateNode(NodeServer):
             # Merge unconfirmed pools
             old_uc_pool = {}
             if old_block:
-                old_uc_pool = old_block.to_dict()
-            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool["transactions"], pool_state, block_dict["block_dict"]["transactions"])
+                old_uc_pool = old_block.to_dict()["transactions"]
+            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool, pool_state, block_dict["block_dict"]["transactions"])
             
             # Write current blockchain
             with open('tx_database.json','w') as data_file:
@@ -404,7 +404,9 @@ class TxValidateNode(NodeServer):
     
     @staticmethod
     def verify_num_resps(num_resps, network_info):
-        return num_resps / len(network_info) > 0.48
+        num_nodes = len(network_info)
+        print("Num responses: {0}/{1}".format(num_resps, num_nodes))
+        return num_resps / num_nodes > 0.48
     
     def proof_of_work_completed(self, block, nonce):
         block_dict = block.to_dict()
@@ -417,6 +419,7 @@ class TxValidateNode(NodeServer):
         #send block to broadcast
         block_broadcast={'block_hash':block_hash,'block_dict':block_dict}
         num_resps = self.broadcast_message("POST", "block", block_broadcast)
+        num_resps += 1 # for this node
         
         # Check for responses from 51% of nodes
         if TxValidateNode.verify_num_resps(num_resps, self.network_info):

@@ -30,8 +30,8 @@ class TxOriginNode:
         else:
             raise Exception("Failed to get validating node info: " + str(status))
         """
-        # self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
-        self.node_info = NodeInfo("node1", "localhost", 8080)
+        self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
+        # self.node_info = NodeInfo("node1", "localhost", 8080)
         
         # Send transaction if this succeeds
         if self.txs:
