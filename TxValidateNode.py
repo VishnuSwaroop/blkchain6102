@@ -168,7 +168,7 @@ class TxValidateNode(NodeServer):
         owner = payload_dict["owner"]
         tx_hashtable = load_global_hash()
         if owner in tx_hashtable:
-            return tx_hashtable[owner]
+            return { "previous_hash": tx_hashtable[owner] }
         return None
     
     def handle_new_tx(self, tx):
@@ -176,7 +176,7 @@ class TxValidateNode(NodeServer):
         resp_dict = self.handle_add_tx(tx)
         # TODO: could refuse to broadcast transaction until after it is validated?
         self.broadcast_message("POST", "add_tx", tx)
-        return resp_dict        
+        return resp_dict
     
     def handle_add_tx(self, transaction):
         print("Adding transaction")
@@ -389,47 +389,64 @@ class TxValidateNode(NodeServer):
             self.proof_of_work = None
             return aborted_transactions
     
+    @staticmethod
+    def verify_num_resps(num_resps, network_info):
+        return num_resps / len(network_info) > 0.5
+    
     def proof_of_work_completed(self, block, nonce):
         block_dict = block.to_dict()
         block_dict['block_header']['nonce']=nonce
         
-        with open('blockchain_database.json','r') as data_file:    
-            blockchain_state = json.load(data_file) #returns the entire blockchain        
-        
-        #should we include previous hash here ? Will that work with the nonce while verification ? because its only used for comparison in the generation of nonce
-        header_data=str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+ str(block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount'])+str( block_dict['block_header']['nonce'])
-        block_hash=SHA512.new(bytes(header_data)).hexdigest()
-        
-        blockchain_state[block_hash]=block_dict
-        
-        with open('blockchain_database.json','w') as outputfile:    
-            json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
-        
-        with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
-            json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
-            
-        
         #send block to broadcast
         block_broadcast={'block_hash':block_hash,'block_dict':block_dict}
+        num_resps = self.broadcast_message("POST", "block", block_broadcast)
         
-        self.broadcast_message("POST", "block", block_broadcast)
+        # Check for responses from 51% of nodes
+        if TxValidateNode.verify_num_resps(num_resps, self.network_info):
+            # Add block to local blockchain
+            with open('blockchain_database.json','r') as data_file:    
+                blockchain_state = json.load(data_file) #returns the entire blockchain        
+            
+            #should we include previous hash here ? Will that work with the nonce while verification ? because its only used for comparison in the generation of nonce
+            header_data=str(block_dict['magicnum']) +str(block_dict['block_header']['version'])+ str(block_dict['block_header']['merklehash'])+str(block_dict['block_header']['time'])+str(block_dict['txcount'])+str( block_dict['block_header']['nonce'])
+            block_hash=SHA512.new(bytes(header_data)).hexdigest()
+            
+            blockchain_state[block_hash]=block_dict
+            
+            with open('blockchain_database.json','w') as outputfile:    
+                json.dump(blockchain_state,outputfile,indent=4, sort_keys=True) #writes newly generated block to block chain  
+            
+            with open('newest_blkhash.json','w') as data_file: #stores the hash of the latest added block
+                json.dump({'newest_hash':block_hash},data_file,indent=4, sort_keys=True)
+        else:
+            # Return transactions back into unconfirmed pool
+            # Read current blockchain
+            with open('tx_database.json','r') as data_file:
+                pool_state = json.load(data_file)
+            
+            # Merge unconfirmed pools
+            final_uc_pool = self.merge_unconfirmedpool(old_uc_pool.to_dict()["transactions"], pool_state, block_dict["block_dict"]["transactions"])
+            
+            # Write current blockchain
+            with open('tx_database.json','w') as data_file:
+                json.dump(data_file, final_uc_pool)
+        
         self.proof_of_work = None
         
     def proof_of_work_failed(self, failure, old_uc_pool):
         raise Exception("Hashcash thread threw an exception: {0}".format(str(failure)))
-        
-    def return_aborted_transactions(self, old_uc_pool):
-        print("Txs from aborted block returned to UC pool")
-        self.uc_pool.extend(old_uc_pool)    
     
     def broadcast_message(self, method, fcn, msg_dict):
+        num_successes = 0
         if self.network_info:
             print("Broadcasting message: {0} [{1}] {2}".format(method, fcn, str(msg_dict)))
             for node_name, node_info in self.network_info.iteritems():
                 if not (node_info['ip'] == self.local_info.ip and node_info['port'] == self.local_info.port):
                     print("Broadcasting to {0}".format(node_info))
                     try:
-                        resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict)
+                        resp = NodeClient.send_request(self.local_info, node_info, method, fcn, msg_dict, timeout=3)
+                        if resp["status"] == "ok":
+                            num_successes += 1
                     except:
                         # Remove nodes that do not respond from the list after some number of failed attempts
                         if hasattr(self.network_info[node_name], "failed_broadcasts"):
@@ -441,6 +458,8 @@ class TxValidateNode(NodeServer):
                             self.network_info[node_name] = 0
         else:
             print("Failed to broadcast message because CNDS has yet to respond with network info")
+            
+        return num_successes
     
     @staticmethod
     def read_latest_hash():

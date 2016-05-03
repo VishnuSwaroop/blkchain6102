@@ -91,11 +91,8 @@ def get_network_info(session_key):
 
 def get_validating_node():
     r = requests.get(cnds_url + "/get_validating_node")
-    resp_dict = r.json()
-    if resp_dict["status"] == "Available":
-        return resp_dict["suggested_node"]
-    else:
-        return resp_dict["status"]
+    resp = r.json()
+    return resp
 
 def decrypt(session_key, other_nodes_data): #encrypted data is the response received from get request, assumed to be in json
     encrypted_message = other_nodes_data["snapshot"]

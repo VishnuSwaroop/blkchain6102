@@ -18,16 +18,16 @@ class TxOriginNode:
         print("Retrieving node info from CNDS")
         
         resp_dict = get_validating_node()
+        status = resp_dict["status"]
         
         # Check if resp_dict is a string
-        if not isinstance(resp_dict, basestring):
-            self.node_info = NodeInfo(resp_dict["node_name"],
-                                resp_dict["ip_address"],
-                                TxValidateNode.default_port,
-                                resp_dict["public_key"])
+        if status == "Available":
+            self.node_info = NodeInfo(None,
+                                resp_dict["suggested_node"],
+                                TxValidateNode.default_port)
             print("TxValidateNode to contact is {0}".format(self.node_info))
         else:
-            raise Exception("Failed to get validating node info: " + str(resp_dict))
+            raise Exception("Failed to get validating node info: " + str(status))
         
         #self.node_info = NodeInfo("node1", "162.243.41.99", 8080)
         
@@ -38,7 +38,7 @@ class TxOriginNode:
         
     def send_new_tx(self, tx):
         print("Sending transaction: " + str(tx))
-        resp_dict = NodeClient.send_request(None, self.node_info, 'POST', "new_tx", tx.to_dict())
+        resp_dict = NodeClient.send_request(None, self.node_info, 'POST', "new_tx", tx.to_dict(), timeout=20)
         status = resp_dict["status"]
         
         if status == "ok":
